@@ -1,6 +1,7 @@
 from ai.pathing import astar
 from hexgrid import DIRECTIONS, add, in_bounds
 from layout import ACTOR_START, WALLS, build_world
+from smartobjects import slot_facing, slot_tile
 
 
 def objects_by_name(world):
@@ -11,15 +12,15 @@ def test_slots_are_walkable_and_face_their_object():
     world = build_world()
     for obj in world.smart_objects.objects:
         for slot in obj.slots:
-            assert world.is_walkable(slot.tile)
-            assert add(slot.tile, DIRECTIONS[slot.facing]) == obj.tile
+            assert world.is_walkable(slot_tile(obj, slot))
+            assert add(slot_tile(obj, slot), DIRECTIONS[slot_facing(slot)]) == obj.tile
 
 
 def test_every_slot_is_reachable_from_actor_start():
     world = build_world()
     for obj in world.smart_objects.objects:
         for slot in obj.slots:
-            assert astar(world, ACTOR_START, {slot.tile}) is not None, (obj.name, slot.index)
+            assert astar(world, ACTOR_START, {slot_tile(obj, slot)}) is not None, (obj.name, slot.index)
 
 
 def test_layout_zones_match_spec():
@@ -29,7 +30,7 @@ def test_layout_zones_match_spec():
     assert world.zone_of(objects["A"].tile) == "West"
     assert world.zone_of(objects["B"].tile) == "East"
     assert world.zone_of(objects["C"].tile) == "East"
-    assert [world.zone_of(s.tile) for s in objects["B"].slots] == ["West", "East"]
+    assert [world.zone_of(slot_tile(objects["B"], s)) for s in objects["B"].slots] == ["West", "East"]
     assert world.zone_of(ACTOR_START) == "West"
     assert world.is_walkable(ACTOR_START)
 

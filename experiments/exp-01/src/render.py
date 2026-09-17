@@ -5,6 +5,7 @@ import math
 import pygame
 
 from hexgrid import DIRECTIONS, all_tiles
+from smartobjects import slot_tile
 
 WINDOW_SIZE = (1600, 900)
 VIEW_SIZE = (1180, 900)
@@ -112,7 +113,7 @@ class Renderer:
             color = OBJECT_COLORS.get(obj.name, COLORS["wall"])
             object_center = to_screen(tile_to_world_px(obj.tile))
             for slot in obj.slots:
-                center = to_screen(tile_to_world_px(slot.tile))
+                center = to_screen(tile_to_world_px(slot_tile(obj, slot)))
                 corners = hex_corners(center, scale=0.45)
                 if world.smart_objects.is_claimed(obj, slot):
                     pygame.draw.polygon(view, COLORS["claimed"], corners)

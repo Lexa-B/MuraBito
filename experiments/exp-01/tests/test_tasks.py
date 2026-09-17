@@ -14,7 +14,7 @@ from ai.tasks import (
     release_claim,
 )
 from hexgrid import DIRECTIONS, add
-from smartobjects import Interaction, Slot, SmartObject
+from smartobjects import Interaction, Slot, SmartObject, slot_tile
 from world import Actor, World
 
 
@@ -24,10 +24,11 @@ def set_last_used(name):
     return effect
 
 
-def make_ctx(object_tile=(6, 0), slot_tile=(5, 0), facing=0, duration=0.5):
+def make_ctx(object_tile=(6, 0), slot_direction=3, duration=0.5):
+    """One object A; with the defaults its only slot is at (5, 0) and the actor starts at (0, 0)."""
     world = World()
     obj = SmartObject(
-        "A", object_tile, frozenset({"Object.A"}), [Slot(0, slot_tile, facing)],
+        "A", object_tile, frozenset({"Object.A"}), [Slot(0, slot_direction)],
         [Interaction("A.Only", duration, (set_last_used("A"),))],
     )
     world.add_object(obj)
@@ -61,7 +62,7 @@ def test_find_and_claim_success():
     task.enter(ctx)
     assert task.tick(ctx, 0.1) is Status.SUCCEEDED
     assert ctx["Target"] == "A"
-    assert ctx["Claim"].slot.tile == (5, 0)
+    assert slot_tile(ctx["Claim"].object, ctx["Claim"].slot) == (5, 0)
     assert ctx["world"].smart_objects.is_claimed(obj, obj.slots[0])
     assert log == ["claim A / slot 0"]
 
@@ -84,7 +85,7 @@ def test_find_and_claim_fails_when_every_slot_is_claimed():
 
 def test_move_to_walks_to_claimed_slot_and_faces_object():
     # Object is SE of the slot, so the last step (heading E) must not decide the final facing.
-    ctx, obj, _ = make_ctx(object_tile=(5, 1), slot_tile=(5, 0), facing=5)
+    ctx, obj, _ = make_ctx(object_tile=(5, 1), slot_direction=2)
     claim = FindAndClaim({"Object.A"})
     claim.enter(ctx)
     claim.tick(ctx, 0.1)

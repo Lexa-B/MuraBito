@@ -17,7 +17,7 @@ def test_center_column_is_east():
 
 def test_walls_objects_and_out_of_bounds_are_not_walkable():
     world = World(walls=[(2, 0)])
-    obj = SmartObject("A", (4, 0), frozenset({"Object.A"}), [Slot(0, (3, 0), 0)], [])
+    obj = SmartObject("A", (4, 0), frozenset({"Object.A"}), [Slot(0, 3)], [])
     world.add_object(obj)
     assert world.smart_objects.objects == [obj]
     assert not world.is_walkable((2, 0))

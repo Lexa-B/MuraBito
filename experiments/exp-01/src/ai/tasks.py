@@ -3,6 +3,7 @@
 from ai.pathing import astar
 from ai.statetree import Evaluator, Status, Task
 from hexgrid import direction_index
+from smartobjects import slot_facing, slot_tile
 
 
 class ZoneEvaluator(Evaluator):
@@ -90,8 +91,8 @@ class MoveTo(Task):
     def _face_claimed_object(ctx):
         claim = ctx.get("Claim")
         actor = ctx["actor"]
-        if claim is not None and actor.tile == claim.slot.tile:
-            actor.facing = claim.slot.facing
+        if claim is not None and actor.tile == slot_tile(claim.object, claim.slot):
+            actor.facing = slot_facing(claim.slot)
 
 
 class Interact(Task):
@@ -141,7 +142,7 @@ class Wait(Task):
 
 def claimed_slot_goal(ctx):
     claim = ctx.get("Claim")
-    return {claim.slot.tile} if claim is not None else None
+    return {slot_tile(claim.object, claim.slot)} if claim is not None else None
 
 
 def random_tile_goal(ctx):

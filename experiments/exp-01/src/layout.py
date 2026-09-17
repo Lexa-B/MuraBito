@@ -1,6 +1,5 @@
 """The starting layout for exp-00. All placeholder content: edit freely."""
 
-from hexgrid import DIRECTIONS, add
 from smartobjects import Interaction, Slot, SmartObject
 from world import World
 
@@ -37,10 +36,7 @@ def placeholder_interactions(name):
 
 def make_object(name, tile, slot_directions):
     """Slots sit on the neighbors in `slot_directions`, each facing back at the object."""
-    slots = [
-        Slot(index=i, tile=add(tile, DIRECTIONS[d]), facing=(d + 3) % 6)
-        for i, d in enumerate(slot_directions)
-    ]
+    slots = [Slot(index=i, direction=d) for i, d in enumerate(slot_directions)]
     return SmartObject(
         name=name,
         tile=tile,
