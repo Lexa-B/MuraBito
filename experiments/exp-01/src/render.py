@@ -21,11 +21,14 @@ CULL_MARGIN = 80
 
 COLORS = {
     "void": (18, 20, 26),
-    "west": (70, 96, 78),
-    "east": (104, 94, 70),
+    "zone_NE": (104, 94, 70),
+    "zone_S": (70, 96, 78),
+    "zone_NW": (78, 84, 112),
     "grid": (40, 46, 44),
     "path": (240, 220, 120),
     "claimed": (250, 240, 170),
+    "slot_blocked": (90, 90, 96),
+    "pause": (250, 250, 250),
     "wall": (120, 118, 128),
     "outline": (30, 30, 36),
     "actor": (236, 236, 240),
@@ -61,6 +64,15 @@ def actor_world_px(actor):
         return (x0, y0)
     x1, y1 = tile_to_world_px(actor.next_tile)
     t = actor.progress
+    return (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
+
+
+def object_world_px(obj):
+    x0, y0 = tile_to_world_px(obj.tile)
+    if obj.next_tile is None:
+        return (x0, y0)
+    x1, y1 = tile_to_world_px(obj.next_tile)
+    t = obj.progress
     return (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
 
 
@@ -101,7 +113,7 @@ class Renderer:
             center = to_screen(tile_to_world_px(tile))
             if not self._visible(center):
                 continue
-            base = COLORS["west"] if world.zone_of(tile) == "West" else COLORS["east"]
+            base = COLORS[f"zone_{world.zone_of(tile)}"]
             corners = hex_corners(center)
             pygame.draw.polygon(view, shade(base, 1.0 - 0.05 * ((tile[0] - tile[1]) % 3)), corners)
             pygame.draw.polygon(view, COLORS["grid"], corners, 1)
@@ -110,10 +122,15 @@ class Renderer:
             pygame.draw.circle(view, COLORS["path"], to_screen(tile_to_world_px(tile)), 4)
 
         for obj in world.smart_objects.objects:
-            color = OBJECT_COLORS.get(obj.name, COLORS["wall"])
-            object_center = to_screen(tile_to_world_px(obj.tile))
+            object_px = object_world_px(obj)
+            object_center = to_screen(object_px)
+            base_x, base_y = tile_to_world_px(obj.tile)
             for slot in obj.slots:
-                center = to_screen(tile_to_world_px(slot_tile(obj, slot)))
+                tile = slot_tile(obj, slot)
+                # Slots ride along with the object's in-between position.
+                slot_x, slot_y = tile_to_world_px(tile)
+                center = to_screen((object_px[0] + slot_x - base_x, object_px[1] + slot_y - base_y))
+                color = OBJECT_COLORS.get(obj.name, COLORS["wall"]) if world.is_walkable(tile) else COLORS["slot_blocked"]
                 corners = hex_corners(center, scale=0.45)
                 if world.smart_objects.is_claimed(obj, slot):
                     pygame.draw.polygon(view, COLORS["claimed"], corners)
@@ -123,7 +140,7 @@ class Renderer:
 
         # Raised things and the actor, back to front.
         drawables = [(tile_to_world_px(t)[1], "wall", t) for t in world.walls]
-        drawables += [(tile_to_world_px(o.tile)[1], "object", o) for o in world.smart_objects.objects]
+        drawables += [(object_world_px(o)[1], "object", o) for o in world.smart_objects.objects]
         actor_px = actor_world_px(sim.actor)
         drawables.append((actor_px[1] + 0.1, "actor", actor_px))
         for _, kind, item in sorted(drawables, key=lambda d: d[0]):
@@ -132,11 +149,9 @@ class Renderer:
                 if self._visible(center):
                     self._draw_column(center, WALL_HEIGHT, COLORS["wall"])
             elif kind == "object":
-                center = to_screen(tile_to_world_px(item.tile))
+                center = to_screen(object_world_px(item))
                 if self._visible(center):
-                    self._draw_column(center, OBJECT_HEIGHT, OBJECT_COLORS.get(item.name, COLORS["wall"]))
-                    label = self.big.render(item.name, True, COLORS["text_active"])
-                    view.blit(label, label.get_rect(center=(center[0], center[1] - OBJECT_HEIGHT)))
+                    self._draw_object(world, item, center)
             else:
                 self._draw_actor(sim, to_screen(item))
 
@@ -157,6 +172,23 @@ class Renderer:
             pygame.draw.polygon(self.view, shade(color, factor), [ground[a], ground[b], top[b], top[a]])
         pygame.draw.polygon(self.view, color, top)
         pygame.draw.polygon(self.view, COLORS["outline"], top, 1)
+
+    def _draw_object(self, world, obj, center):
+        view = self.view
+        self._draw_column(center, OBJECT_HEIGHT, OBJECT_COLORS.get(obj.name, COLORS["wall"]))
+        top = (center[0], center[1] - OBJECT_HEIGHT)
+        label = self.big.render(obj.name, True, COLORS["text_active"])
+        view.blit(label, label.get_rect(center=top))
+        # Heading tick from the edge of the column top.
+        hx, hy = tile_to_world_px(DIRECTIONS[obj.heading])
+        length = math.hypot(hx, hy)
+        ux, uy = hx / length, hy / length
+        start = (top[0] + ux * HEX_SIZE * 0.55, top[1] + uy * HEX_SIZE * 0.55)
+        end = (top[0] + ux * HEX_SIZE * 0.95, top[1] + uy * HEX_SIZE * 0.95)
+        pygame.draw.line(view, COLORS["text_active"], start, end, 3)
+        if obj.pauses_during_use and world.smart_objects.is_in_use(obj):
+            for dx in (-12, 8):
+                pygame.draw.rect(view, COLORS["pause"], pygame.Rect(top[0] + dx, top[1] - 34, 4, 12))
 
     def _draw_actor(self, sim, center):
         view = self.view
