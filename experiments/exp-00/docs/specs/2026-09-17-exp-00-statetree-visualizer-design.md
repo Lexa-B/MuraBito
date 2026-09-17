@@ -93,7 +93,7 @@ No pygame imports. A small model of UE5 Smart Objects, reduced to the Sims-style
 
 No pygame imports. Concepts are named after UE5 StateTree:
 
-- **Context:** a plain dict shared by everything: `Zone`, `LastUsed`, `Target`, `Claim`, `Interaction`, `Path`, plus `actor`, `world`, `rng`, and `log` references.
+- **Context:** a plain dict shared by everything: `Zone`, `LastUsed`, `Target`, `Claim`, `Interaction`, `InteractionElapsed`, `Path`, plus `actor`, `world`, `rng`, and `log` references. It's built in `src/sim.py`, which wires the world (starting layout in `src/layout.py`), actor, tree and context together.
 - **Condition:** `name: str` + `test(ctx) → bool`. The last result is stored for the panel.
 - **Task:**
   - `enter(ctx)`, `tick(ctx, dt) → RUNNING | SUCCEEDED | FAILED`, `exit(ctx)`.
@@ -117,6 +117,7 @@ No pygame imports. Concepts are named after UE5 StateTree:
      - `ON_CONDITION` is checked every tick.
      - On `SUCCEEDED`, the leaf's `ON_COMPLETED` transition fires; if the leaf has none, parents are checked upward.
      - On `FAILED`, the same happens with `ON_FAILED`.
+     - If the task finished (`SUCCEEDED` or `FAILED`) and no state on the active path has a matching transition, the tree transitions to `ROOT` and logs it, so a finished task never keeps ticking.
   5. When a transition fires:
      - exit the current leaf's task;
      - select starting from the target, which gives a new active path;
@@ -130,6 +131,7 @@ No pygame imports. Concepts are named after UE5 StateTree:
   - If no child selects, the state fails and control falls back to the parent's next child.
   - Selecting from `ROOT` tries root's children in order.
   - A transition that targets a sibling leaf (e.g. `FindAndClaim → MoveTo`) keeps the shared parent on the active path, so its `on_exit` does not run.
+  - If a transition's target can't be selected (its enter conditions fail), the tree logs it and selects from `ROOT` instead.
   - If nothing at all is selectable, the tree logs an error and stays idle. The example tree prevents this with an unconditioned fallback.
   - The panel reads every recorded result (condition ✓/✗, active path).
 - **`reset(ctx)`:** runs `on_exit` for the whole active path, deepest first, then clears the active state. Used by `R`.
@@ -194,7 +196,7 @@ Leaving `GoUse` for `Wander` releases the claim.
 
 **Starting layout:**
 - A is deep in the West zone, with 2 slots.
-- B is in the East zone near the center column, with 1 slot.
+- B is on the center column (so it counts as East), with 2 slots: one on the West side and one on the East side. The actor claims whichever is nearer, so the side it approaches from decides which zone it's in when it finishes. That's what makes the zone rules visible: the expected cycle is A → B (West slot) → C → B (East slot) → A.
 - C is far East, with 2 slots.
 - A few short wall segments sit between them so paths visibly curve.
 - The objects are far enough apart that walks take several seconds, so the camera visibly follows.
