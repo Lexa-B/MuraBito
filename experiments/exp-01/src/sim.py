@@ -1,4 +1,4 @@
-"""Wires the world, actor, StateTree and shared context together."""
+"""Wires the world, actor, object mover, StateTree and shared context together."""
 
 import random
 from dataclasses import dataclass
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from ai.statetree import StateTree
 from ai.tree_def import build_tree
 from layout import ACTOR_START, build_world
+from wander import ObjectMover
 from world import Actor, World
 
 
@@ -15,8 +16,10 @@ class Sim:
     actor: Actor
     tree: StateTree
     ctx: dict
+    mover: ObjectMover
 
     def step(self, dt: float) -> None:
+        self.mover.tick(dt)
         self.tree.tick(self.ctx, dt)
 
 
@@ -24,6 +27,7 @@ def build_sim(seed: int = 0) -> Sim:
     world = build_world()
     actor = Actor(tile=ACTOR_START)
     tree = build_tree()
+    rng = random.Random(seed)
     ctx = {
         "Zone": None,
         "LastUsed": None,
@@ -34,7 +38,7 @@ def build_sim(seed: int = 0) -> Sim:
         "Path": None,
         "actor": actor,
         "world": world,
-        "rng": random.Random(seed),
+        "rng": rng,
         "log": tree.write_log,
     }
-    return Sim(world, actor, tree, ctx)
+    return Sim(world, actor, tree, ctx, ObjectMover(world, actor, rng))
