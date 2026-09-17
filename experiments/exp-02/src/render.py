@@ -256,7 +256,7 @@ class Renderer:
         claim = ctx.get("Claim")
         interaction = ctx.get("Interaction")
         path = ctx.get("Path")
-        claim_text = f"{claim.object.name} / slot {claim.slot.index}" if claim is not None else "None"
+        claim_text = f"{claim[0]} / slot {claim[1]}" if claim is not None else "None"
         if interaction is not None:
             interaction_text = f"{interaction.name} {ctx.get('InteractionElapsed', 0.0):.1f} / {interaction.duration:.1f}s"
         else:
