@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from ai.statetree import StateTree
 from ai.tree_def import build_tree
-from layout import ACTOR_START, build_world
+from layout import build_world
 from wander import ObjectMover
 from world import Actor, World
 
@@ -24,10 +24,9 @@ class Sim:
 
 
 def build_sim(seed: int = 0) -> Sim:
-    world = build_world()
-    actor = Actor(tile=ACTOR_START)
-    tree = build_tree()
     rng = random.Random(seed)
+    world, actor = build_world(rng)
+    tree = build_tree()
     ctx = {
         "Zone": None,
         "LastUsed": None,

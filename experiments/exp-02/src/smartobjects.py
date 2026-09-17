@@ -29,6 +29,7 @@ class SmartObject:
     interactions: list[Interaction]
     home_zone: str = ""
     pauses_during_use: bool = True
+    casts_shadow: bool = False  # blocks the actor's line of sight from its logical tile
     heading: int = 0  # index into hexgrid.DIRECTIONS
     next_tile: Tile | None = None
     progress: float = 0.0  # 0..1 from tile toward next_tile

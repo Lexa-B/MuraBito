@@ -1,25 +1,14 @@
-"""The starting layout for exp-02. All placeholder content: edit freely."""
+"""The object definitions for exp-02, placed on a random map. All placeholder content: edit freely."""
 
+from mapgen import generate
 from smartobjects import Interaction, Slot, SmartObject
-from world import World
+from world import Actor, World
 
-ACTOR_START = (-8, 2)  # NW
-
-# Short segments inside each zone, none on or next to a zone border.
-WALLS = (
-    [(-8, r) for r in range(-2, 2)] + [(q, -7) for q in range(-2, 2)]  # NW
-    + [(-6, 6), (-5, 5), (-4, 4), (-3, 3)]  # S
-    + [(q, 8) for q in range(-6, -2)] + [(3, r) for r in range(6, 10)]  # S
-    + [(-7, 10), (-6, 10), (-5, 10), (-4, 10)]  # S
-    + [(8, r) for r in range(-6, -2)] + [(q, -9) for q in range(6, 10)]  # NE
-    + [(5, 1), (6, 0), (7, -1), (8, 0)]  # NE (three-tile segment plus a lone pillar)
-)
-
-# (name, start tile, slot directions from the object, home zone, pauses during use)
+# (name, slot directions from the object, home zone, pauses during use, casts shadow)
 OBJECTS = (
-    ("A", (-5, -2), (0, 5), "NW", True),
-    ("B", (-2, 5), (2, 1), "S", True),
-    ("C", (5, -2), (3, 4), "NE", False),
+    ("A", (0, 5), "NW", True, True),
+    ("B", (2, 1), "S", True, True),
+    ("C", (3, 4), "NE", False, False),
 )
 
 
@@ -36,7 +25,7 @@ def placeholder_interactions(name):
     ]
 
 
-def make_object(name, tile, slot_directions, home_zone="", pauses_during_use=True):
+def make_object(name, tile, slot_directions, home_zone="", pauses_during_use=True, casts_shadow=False, heading=0):
     return SmartObject(
         name=name,
         tile=tile,
@@ -45,11 +34,16 @@ def make_object(name, tile, slot_directions, home_zone="", pauses_during_use=Tru
         interactions=placeholder_interactions(name),
         home_zone=home_zone,
         pauses_during_use=pauses_during_use,
+        casts_shadow=casts_shadow,
+        heading=heading,
     )
 
 
-def build_world() -> World:
-    world = World(walls=WALLS)
-    for name, tile, slot_directions, home_zone, pauses in OBJECTS:
-        world.add_object(make_object(name, tile, slot_directions, home_zone, pauses))
-    return world
+def build_world(rng) -> tuple[World, Actor]:
+    """A random map from `rng`: walls, the objects in OBJECTS, and the actor."""
+    specs = [(home_zone, slot_directions, casts_shadow) for _, slot_directions, home_zone, _, casts_shadow in OBJECTS]
+    walls, placed, actor_tile, actor_facing = generate(rng, specs)
+    world = World(walls=walls)
+    for (name, slot_directions, home_zone, pauses, casts_shadow), (tile, heading) in zip(OBJECTS, placed):
+        world.add_object(make_object(name, tile, slot_directions, home_zone, pauses, casts_shadow, heading))
+    return world, Actor(tile=actor_tile, facing=actor_facing)

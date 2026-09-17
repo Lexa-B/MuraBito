@@ -1,13 +1,12 @@
 import pytest
 
-from layout import ACTOR_START
 from sim import build_sim
 from world import zone_of
 
 
 def test_build_sim_wires_context_and_mover():
     sim = build_sim(seed=0)
-    assert sim.actor.tile == ACTOR_START
+    assert sim.world.is_walkable(sim.actor.tile)
     assert sim.ctx["actor"] is sim.actor and sim.ctx["world"] is sim.world
     assert sim.mover.world is sim.world and sim.mover.actor is sim.actor and sim.mover.rng is sim.ctx["rng"]
     for key in ["Zone", "LastUsed", "Target", "Claim", "Interaction", "Path"]:

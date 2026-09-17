@@ -23,7 +23,9 @@ def make_subsystem():
 
 def test_new_object_movement_defaults():
     obj = make_object("A", (0, 0), [0])
-    assert (obj.home_zone, obj.pauses_during_use, obj.heading, obj.next_tile, obj.progress) == ("", True, 0, None, 0.0)
+    assert (obj.home_zone, obj.pauses_during_use, obj.casts_shadow, obj.heading, obj.next_tile, obj.progress) == (
+        "", True, False, 0, None, 0.0
+    )
 
 
 def test_slot_tile_and_facing_follow_the_object():

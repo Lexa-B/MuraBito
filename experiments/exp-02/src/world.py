@@ -4,19 +4,9 @@ from dataclasses import dataclass
 
 from hexgrid import MAP_RADIUS, Tile, all_tiles, in_bounds
 from smartobjects import SmartObject, SmartObjectSubsystem
+from zones import ZONES, zone_of  # re-exported: zone_of used to live here
 
-ZONES = ("NE", "S", "NW")
-
-
-def zone_of(tile: Tile) -> str:
-    """Three 120-degree sectors, by the largest cube coordinate; ties go q, then r, then s."""
-    q, r = tile
-    s = -q - r
-    if q >= r and q >= s:
-        return "NE"
-    if r >= s:
-        return "S"
-    return "NW"
+__all__ = ["ZONES", "Actor", "World", "zone_of"]
 
 
 class World:

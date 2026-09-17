@@ -4,7 +4,7 @@ from collections import Counter
 import pytest
 
 from hexgrid import DIRECTIONS, add, direction_index
-from layout import ACTOR_START, build_world
+from layout import build_world
 from smartobjects import Slot, SmartObject
 from wander import MOVE_RATE, STEP_SPEED, TURN_FALLOFF, ObjectMover, choose_direction, direction_weights, divergence
 from world import Actor, World, zone_of
@@ -121,9 +121,9 @@ def test_no_step_when_every_direction_is_blocked():
 
 @pytest.mark.parametrize("seed", range(3))
 def test_long_run_objects_stay_in_zone_and_never_overlap(seed):
-    world = build_world()
-    actor = Actor(tile=ACTOR_START)
-    mover = ObjectMover(world, actor, random.Random(seed))
+    rng = random.Random(seed)
+    world, actor = build_world(rng)
+    mover = ObjectMover(world, actor, rng)
     objects = world.smart_objects.objects
     for _ in range(120 * 60):
         mover.tick(1 / 60)
