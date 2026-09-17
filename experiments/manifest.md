@@ -93,3 +93,21 @@ Same as exp-00: Space pause/resume · N step one tick while paused · +/- sim sp
 ### Headless
 
 `cd experiments/exp-01 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --speed S --screenshot-dir screenshots --screenshot-every K` (screenshots/ is gitignored).
+
+---
+
+## exp-02
+
+- **Started:** 2026-09-18
+- **Stack:** Python 3.13 + pygame, managed with uv
+- **Run:** `cd experiments/exp-02 && uv run src/main.py`
+- **Test:** `cd experiments/exp-02 && uv run pytest`
+- **Design:** not written yet
+
+### Why
+
+Not decided yet.
+
+### What
+
+Starts as a copy of exp-01. What changes is not decided yet.
