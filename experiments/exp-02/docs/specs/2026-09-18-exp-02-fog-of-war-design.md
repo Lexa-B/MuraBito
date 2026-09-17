@@ -472,3 +472,12 @@ Found while running the implementation plan's code in a scratchpad; the plan (`d
 - **Map generation:** an object may not start on an earlier object's slot tile.
 - **Frontier:** never the actor's own tile.
 - **ChooseTarget** clears `Target` on enter.
+
+## Amendments from review (2026-09-18)
+
+Found during the whole-branch code review of `src/ai/tasks.py`:
+
+- Search checks give-up (LOST, or no uncleared area tile) at tile boundaries through the shared `at_tile()` hook, not every tick; worst delay one step (about 1/3 s).
+- When Search gives up it releases any held claim through the body (logging `release X / slot i`) before logging `search: give up on X`. Found in review: a claim held into Search could otherwise survive into Explore and ChooseTarget and name a different object than `Target`. The long-run sim test checks `Claim is None or Claim[0] == Target` every tick.
+- Search also gives up if no area tile is reachable (it first tries the nearest-to-ghost tile, then any area tile); the actor's own tile is excluded from the area it walks to.
+- `MoveTo.arrived` (claim mode) returns RUNNING when it has just claimed a slot other than the one it stands on; the chase re-plan on the next tick walks to the claimed slot.

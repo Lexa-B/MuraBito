@@ -119,6 +119,12 @@ Starts as a copy of exp-01: same hex map, three zones, wandering Smart Objects, 
 - **Behaviour.** The actor chooses targets from beliefs, claims a slot only once the object is in view, searches when a belief turns out wrong, and explores when it knows nothing.
 - **Rendering.** Fog of war, ghost markers for believed positions, a sense cone, and a truth overlay (`T`). The brain panel gains a belief table.
 
+### Layout
+
+- `src/`: same as exp-01, plus `zones.py` (zone geometry), `mapgen.py` (random walls and starts), `body.py` (the truth-side actuator).
+- `src/ai/`: same as exp-01, plus `vision.py` (sense cone and shadowcasting), `beliefs.py` (belief store, believed map, search area, frontier), `perception.py` (the only AI code that reads the world). `tasks.py` gains `ChooseTarget`, `Search` and `Explore` and reads beliefs.
+- `tests/`: same as exp-01 minus `test_layout.py`, plus `test_vision.py`, `test_mapgen.py`, `test_beliefs.py`, `test_believed_map.py`, `test_perception.py`, `test_body.py`, `test_boundary.py`.
+
 ### Controls
 
 Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) · R reset (same seed) · Shift+R reset with a new seed · T truth overlay · Esc quit.

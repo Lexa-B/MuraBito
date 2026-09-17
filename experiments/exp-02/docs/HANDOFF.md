@@ -1,5 +1,7 @@
 # exp-02 handoff
 
+> **Superseded.** exp-02 has since been designed and built on branch `exp-02-impl` (2026-09-18); this file records the state *before* that work and is kept for history. Current documents: the spec (`docs/specs/2026-09-18-exp-02-fog-of-war-design.md`), the plan (`docs/plans/2026-09-18-exp-02-fog-of-war-plan.md`) and the exp-02 entry in `experiments/manifest.md`.
+
 Written 2026-09-18 at the end of the session that built exp-00 and exp-01. This file holds the context a fresh session needs that **isn't** already in `AGENTS.md`, `experiments/manifest.md`, or the experiment specs. Read those first; this file doesn't repeat them.
 
 ## What exp-02 is
