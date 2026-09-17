@@ -16,41 +16,57 @@ walking to, and interacting with.
 
 A single pygame window, split into two parts:
 
-- **World view (left):** isometric 12×12 tile grid.
-  - Two zones: West (columns 0–5) and East (columns 6–11), drawn with different floor tints.
-  - A handful of blocking tiles, drawn as raised iso blocks.
-  - Three Smart Objects, **A**, **B**, **C**: colored iso blocks, each labeled with its letter. Objects block movement.
+- **Window:** about 1600×900.
+- **World view (left, ~1180×900, clipped):** a hexagon-shaped map of pointy-top hex tiles.
+  - The map is 25 tiles across on all three axes: radius 12 around a center tile, 469 tiles.
+  - Hexes are squashed vertically for a tilted isometric look, about 64px across. At that size the map (~1600px wide) is larger than the world view, so the camera has to move.
+  - Everything is drawn back to front.
+  - Two zones, West and East (see World), drawn with different floor tints.
+  - A few short wall segments (~30–40 tiles total), drawn as raised hex columns.
+  - Three Smart Objects, **A**, **B**, **C**: colored raised hex columns, each labeled with its letter. Objects block movement.
   - Each object's slots are drawn as small floor markers. A claimed slot is highlighted.
-  - One actor: a small iso figure that moves smoothly between tiles at a fixed speed.
+  - One actor: a small figure that moves smoothly between tile centers at a fixed speed.
   - The current A\* path is drawn as dots from the actor to its goal.
   - While the actor is interacting, a progress ring fills, labeled with the interaction name.
+  - **Camera:** the map is larger than the world view, so the camera stays centered on the actor and eases toward its position every frame instead of snapping.
 - **Brain panel (right):** a live view of the actor's decision state.
   - **State tree:** every state, indented by depth. The active path is highlighted. Each enter condition shows ✓/✗ from its most recent evaluation, or no mark if it hasn't been evaluated.
   - **Context:** `Zone`, `LastUsed`, `Target`, `Claim` (e.g. `A / slot 0`), `Interaction` (e.g. `A.Long 1.2 / 3.0s`), path length, and the active task's status.
   - **Transition log:** the last ~12 entries, each with a sim timestamp, e.g. `12.4s Interact → Completed`, `12.4s select → GoUse(B)/FindAndClaim`, `12.4s release A / slot 0`.
-- **Controls:** `Space` pause/resume · `N` advance one fixed tick while paused · `+`/`-` sim speed (0.25×–8×) · `R` reset world and tree · `Esc` quit.
+- **Controls:** `Space` pause/resume · `N` advance one fixed tick while paused · `+`/`-` sim speed (0.25×–8×) · `R` reset world, tree and camera (the camera snaps to the actor) · `Esc` quit.
 
 The sim runs on a fixed timestep (dt = 1/60 s) and is scaled by sim speed. Rendering is decoupled from it.
 
-## World and pathing (`src/world.py`, `src/ai/pathing.py`)
+## Hex grid, world and pathing (`src/hexgrid.py`, `src/world.py`, `src/ai/pathing.py`)
 
+- **`hexgrid.py`**, for pointy-top hexes in axial `(q, r)` coordinates:
+  - `DIRECTIONS`: the 6 axial direction offsets in a fixed order. Index 0 is E, then counter-clockwise.
+  - `neighbors(tile)`: the in-bounds neighbors, in `DIRECTIONS` order.
+  - `distance(a, b)`: hex distance.
+  - `in_bounds(tile, radius=12)`: `distance(tile, (0,0)) <= radius`.
+  - `all_tiles(radius=12)`: every tile on the map (469).
 - `World` holds:
-  - the grid size;
+  - the map radius (12);
   - the blocked-tile set, which includes object tiles;
   - the `SmartObjectSubsystem`;
-  - `zone_of(tile) → "West" | "East"`.
+  - `zone_of(tile) → "West" | "East"`: West if `2q + r < 0` (strictly left of the center column); otherwise East, so the center column counts as East.
 - `astar(world, start, goals) → list[tile] | None`
-  - 4-directional, Manhattan heuristic to the nearest goal.
+  - 6 hex neighbors, uniform step cost, hex-distance heuristic to the nearest goal.
   - `goals` is a set of tiles: the path ends at whichever goal is cheapest to reach.
+  - The returned path includes both the start and the goal tile.
   - Returns `None` if no goal can be reached.
-- `world.py` and `pathing.py` do not import pygame.
-- Isometric projection helpers (`tile_to_screen`, used for drawing) live in `render.py`.
+- `hexgrid.py`, `world.py` and `pathing.py` do not import pygame.
+- The hex-to-screen projection (`tile_to_world_px`, squashed pointy-top layout) lives in `render.py`.
+- **`src/camera.py`**, also no pygame:
+  - `Camera.follow(target_px, dt)` eases the camera position toward the target (exponential smoothing).
+  - `Camera.snap(target_px)` jumps straight there.
+  - `Camera.world_to_screen(px)` offsets a world pixel position so the camera sits at the center of the world view.
 
 ## Smart Objects (`src/smartobjects.py`)
 
 No pygame imports. A small model of UE5 Smart Objects, reduced to the Sims-style core: the object advertises interactions, and the actor claims a slot, walks to it, and performs one.
 
-- **`Slot`:** `tile`, `facing` (one of N/E/S/W, pointing at the object), `index`. Slot tiles must be walkable.
+- **`Slot`:** `tile`, `facing` (index into `hexgrid.DIRECTIONS`, pointing at the object), `index`. Slot tiles must be walkable.
 - **`Interaction`:**
   - `name`, e.g. `A.Short`;
   - `duration` in seconds;
@@ -65,7 +81,7 @@ No pygame imports. A small model of UE5 Smart Objects, reduced to the Sims-style
 - **`SmartObjectSubsystem`:**
   - `register(obj)`.
   - `find(tag_query, near) → list[(SmartObject, Slot)]`
-    - Returns only unclaimed slots, sorted by Manhattan distance from `near`.
+    - Returns only unclaimed slots, sorted by hex distance from `near`.
     - `tag_query` is a set of tags that must all be present; an empty set matches any object.
   - `claim(obj, slot, actor) → ClaimHandle | None`: returns `None` if the slot is already claimed.
   - `release(handle)`: releasing an already-released handle does nothing.
@@ -177,19 +193,29 @@ Each rule row is one compound condition, so the table maps directly onto the tre
 Leaving `GoUse` for `Wander` releases the claim.
 
 **Starting layout:**
-- A is in the West zone with 2 slots.
-- C is in the East zone with 2 slots.
-- B is on the East side near the boundary, with 1 slot.
-- A few obstacles sit between them so paths visibly bend.
+- A is deep in the West zone, with 2 slots.
+- B is in the East zone near the center column, with 1 slot.
+- C is far East, with 2 slots.
+- A few short wall segments sit between them so paths visibly curve.
+- The objects are far enough apart that walks take several seconds, so the camera visibly follows.
 - The actor starts in the West zone.
 
 ## Testing
 
 TDD. Unit tests in `experiments/exp-00/tests/` (pytest, `pythonpath = ["src"]`):
 
-- **`test_pathing.py`**
-  - straight path on an open grid;
-  - path routes around obstacles;
+- **`test_hexgrid.py`**
+  - `all_tiles()` has 469 tiles;
+  - an interior tile has 6 neighbors, in `DIRECTIONS` order;
+  - a corner tile has 3 neighbors and an edge tile 4;
+  - `distance` is correct along each axis and off-axis;
+  - `in_bounds` rejects distance 13.
+- **`test_world.py`**
+  - `zone_of` puts `2q + r < 0` in West;
+  - the center column is East.
+- **`test_pathing.py`** (hex grid)
+  - straight path on an open map, with length equal to hex distance + 1;
+  - path routes around a wall segment;
   - an unreachable goal returns `None`;
   - with several goals, the path ends at the nearest one.
 - **`test_smartobjects.py`**
@@ -225,4 +251,5 @@ TDD. Unit tests in `experiments/exp-00/tests/` (pytest, `pythonpath = ["src"]`):
 - Editing the world while it runs.
 - Save/load.
 - UE-style tasks on parent states.
+- Manual camera control (pan/zoom).
 - Sound.
