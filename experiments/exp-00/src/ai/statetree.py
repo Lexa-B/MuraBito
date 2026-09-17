@@ -166,7 +166,8 @@ class StateTree:
             evaluator.tick(ctx, dt)
 
         if not self.active:
-            self._activate(self._select_from(self.root, ctx), ctx)
+            _, path = self._select_from(self.root, ctx)
+            self._activate(path, ctx)
             if not self.active:
                 return
 
@@ -192,6 +193,7 @@ class StateTree:
                     state.on_exit(ctx)
         self.active = []
         self.last_status = None
+        self._idle_logged = False
 
     def _find_transition(self, status: Status, ctx) -> Transition | None:
         for state in [*reversed(self.active), self.root]:
@@ -209,23 +211,25 @@ class StateTree:
             parent = parent.parent
         return chain[::-1]
 
-    def _select_from(self, target: State, ctx) -> list[State]:
+    def _select_from(self, target: State, ctx) -> tuple[State, list[State]]:
         selected = self.select(target, ctx)
         if selected is not None:
-            return self._ancestors(target) + selected
+            return target, self._ancestors(target) + selected
         if target is not self.root:
             self.write_log(f"{target.path} not selectable, reselecting from ROOT")
-            return self.select(self.root, ctx) or []
-        return []
+            return self.root, self.select(self.root, ctx) or []
+        return target, []
 
     def _take(self, target: State, ctx) -> None:
         old = self.active
         if old[-1].task is not None:
             old[-1].task.exit(ctx)
-        new = self._select_from(target, ctx)
+        effective_target, new = self._select_from(target, ctx)
         for state in reversed(old):
             # Targeting a state re-enters it, so everything at or below the target exits.
-            if state not in new or state.is_at_or_below(target):
+            # An unselectable target falls back to ROOT, so the effective target (not the
+            # original one) governs this even if reselection lands on the same branch.
+            if state not in new or state.is_at_or_below(effective_target):
                 if state.on_exit is not None:
                     state.on_exit(ctx)
         self.last_status = None
@@ -236,9 +240,9 @@ class StateTree:
         self.active = path
         if path:
             self._idle_logged = False
+            self.write_log(f"select -> {path[-1].path}")
             if path[-1].task is not None:
                 path[-1].task.enter(ctx)
-            self.write_log(f"select -> {path[-1].path}")
         elif not self._idle_logged:
             self._idle_logged = True
             self.write_log("error: no state selectable, idle")

@@ -138,6 +138,47 @@ def test_unselectable_target_reselects_from_root():
     assert "B not selectable, reselecting from ROOT" in [text for _, text in tree.log]
 
 
+def test_unselectable_target_falls_back_to_root_for_on_exit():
+    exits = []
+    tree = StateTree(State("Root", children=[
+        State("P", on_exit=lambda ctx: exits.append("P"), children=[
+            leaf("L1", Status.SUCCEEDED, transitions=[Transition(Trigger.ON_COMPLETED, "P/L2")]),
+            leaf("L2", conditions=[flag("go")]),
+        ]),
+    ]))
+    tree.tick({}, 0.1)
+    assert exits == ["P"]
+    assert "P/L2 not selectable, reselecting from ROOT" in [text for _, text in tree.log]
+    assert tree.leaf.path == "P/L1"
+
+
+def test_select_log_line_precedes_leaf_enter_side_effects():
+    class LoggingTask(Task):
+        def enter(self, ctx):
+            ctx["log"]("entered")
+
+        def tick(self, ctx, dt):
+            return Status.RUNNING
+
+    tree = StateTree(State("Root", children=[State("A", task=LoggingTask())]))
+    ctx = {"log": tree.write_log}
+    tree.tick(ctx, 0.1)
+    assert [text for _, text in tree.log] == ["select -> A", "entered"]
+
+
+def test_reset_clears_idle_logged_flag():
+    tree = StateTree(State("Root", children=[leaf("A", conditions=[flag("a")])]))
+    tree.tick({}, 0.1)
+    tree.tick({}, 0.1)
+    assert [text for _, text in tree.log] == ["error: no state selectable, idle"]
+    tree.reset({})
+    tree.tick({}, 0.1)
+    assert [text for _, text in tree.log] == [
+        "error: no state selectable, idle",
+        "error: no state selectable, idle",
+    ]
+
+
 def test_evaluators_run_before_selection_and_tasks():
     seen = []
 
