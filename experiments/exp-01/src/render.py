@@ -58,22 +58,21 @@ def tile_to_world_px(tile):
     return (math.sqrt(3) * HEX_SIZE * (q + r / 2), 1.5 * HEX_SIZE * r * SQUASH)
 
 
-def actor_world_px(actor):
-    x0, y0 = tile_to_world_px(actor.tile)
-    if actor.next_tile is None:
+def _interpolated_world_px(tile, next_tile, progress):
+    x0, y0 = tile_to_world_px(tile)
+    if next_tile is None:
         return (x0, y0)
-    x1, y1 = tile_to_world_px(actor.next_tile)
-    t = actor.progress
+    x1, y1 = tile_to_world_px(next_tile)
+    t = progress
     return (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
+
+
+def actor_world_px(actor):
+    return _interpolated_world_px(actor.tile, actor.next_tile, actor.progress)
 
 
 def object_world_px(obj):
-    x0, y0 = tile_to_world_px(obj.tile)
-    if obj.next_tile is None:
-        return (x0, y0)
-    x1, y1 = tile_to_world_px(obj.next_tile)
-    t = obj.progress
-    return (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
+    return _interpolated_world_px(obj.tile, obj.next_tile, obj.progress)
 
 
 def hex_corners(center, scale=1.0, lift=0.0):
