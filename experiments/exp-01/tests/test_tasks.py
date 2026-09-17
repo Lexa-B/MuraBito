@@ -53,7 +53,7 @@ def test_zone_evaluator_sets_zone_from_actor_tile():
     ctx, _, _ = make_ctx()
     ctx["actor"].tile = (-3, 0)
     ZoneEvaluator().tick(ctx, 0.1)
-    assert ctx["Zone"] == "West"
+    assert ctx["Zone"] == "NW"
 
 
 def test_find_and_claim_success():

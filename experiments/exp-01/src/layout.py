@@ -1,23 +1,25 @@
-"""The starting layout for exp-00. All placeholder content: edit freely."""
+"""The starting layout for exp-01. All placeholder content: edit freely."""
 
 from smartobjects import Interaction, Slot, SmartObject
 from world import World
 
-ACTOR_START = (-10, 4)
+ACTOR_START = (-8, 2)  # NW
 
+# Short segments inside each zone, none on or next to a zone border.
 WALLS = (
-    [(-4, r) for r in range(-4, 5)]  # between A and B
-    + [(4, r) for r in range(-5, 4)]  # between B and C
-    + [(q, -6) for q in range(-2, 3)]
-    + [(q, 7) for q in range(-3, 2)]
-    + [(q, 9) for q in range(-6, 0)]
+    [(-8, r) for r in range(-2, 2)] + [(q, -7) for q in range(-2, 2)]  # NW
+    + [(-6, 6), (-5, 5), (-4, 4), (-3, 3)]  # NW
+    + [(q, 8) for q in range(-6, -2)] + [(3, r) for r in range(6, 10)]  # S
+    + [(-7, 10), (-6, 10), (-5, 10), (-4, 10)]  # S
+    + [(8, r) for r in range(-6, -2)] + [(q, -9) for q in range(6, 10)]  # NE
+    + [(5, 1), (6, 0), (7, -1), (8, 0)]  # NE
 )
 
-# (name, tile, directions from the object to its slots)
+# (name, start tile, slot directions from the object, home zone, pauses during use)
 OBJECTS = (
-    ("A", (-8, 2), (0, 5)),
-    ("B", (0, 0), (3, 0)),  # one slot each side of the center column
-    ("C", (8, -2), (3, 4)),
+    ("A", (-5, -2), (0, 5), "NW", True),
+    ("B", (-2, 5), (2, 1), "S", True),
+    ("C", (5, -2), (3, 4), "NE", False),
 )
 
 
@@ -34,20 +36,20 @@ def placeholder_interactions(name):
     ]
 
 
-def make_object(name, tile, slot_directions):
-    """Slots sit on the neighbors in `slot_directions`, each facing back at the object."""
-    slots = [Slot(index=i, direction=d) for i, d in enumerate(slot_directions)]
+def make_object(name, tile, slot_directions, home_zone="", pauses_during_use=True):
     return SmartObject(
         name=name,
         tile=tile,
         tags=frozenset({f"Object.{name}"}),
-        slots=slots,
+        slots=[Slot(index=i, direction=d) for i, d in enumerate(slot_directions)],
         interactions=placeholder_interactions(name),
+        home_zone=home_zone,
+        pauses_during_use=pauses_during_use,
     )
 
 
 def build_world() -> World:
     world = World(walls=WALLS)
-    for name, tile, slot_directions in OBJECTS:
-        world.add_object(make_object(name, tile, slot_directions))
+    for name, tile, slot_directions, home_zone, pauses in OBJECTS:
+        world.add_object(make_object(name, tile, slot_directions, home_zone, pauses))
     return world

@@ -1,17 +1,21 @@
 import pytest
 
-from ai.tree_def import build_tree
+from ai.tree_def import build_tree, rule_condition
 
 # Copied from the spec's rules table.
 EXPECTED = {
-    (None, "West"): "GoUse(Nearest)",
-    (None, "East"): "GoUse(Nearest)",
-    ("A", "West"): "GoUse(B)",
-    ("A", "East"): "GoUse(C)",
-    ("B", "West"): "GoUse(C)",
-    ("B", "East"): "GoUse(A)",
-    ("C", "West"): "GoUse(A)",
-    ("C", "East"): "GoUse(B)",
+    (None, "NW"): "GoUse(Nearest)",
+    (None, "S"): "GoUse(Nearest)",
+    (None, "NE"): "GoUse(Nearest)",
+    ("A", "NW"): "GoUse(B)",
+    ("A", "S"): "GoUse(C)",
+    ("A", "NE"): "GoUse(C)",
+    ("B", "NW"): "GoUse(A)",
+    ("B", "S"): "GoUse(C)",
+    ("B", "NE"): "GoUse(A)",
+    ("C", "NW"): "GoUse(B)",
+    ("C", "S"): "GoUse(B)",
+    ("C", "NE"): "GoUse(A)",
 }
 
 
@@ -38,7 +42,12 @@ def test_tree_shape_matches_spec():
 def test_condition_names_are_readable():
     tree = build_tree()
     assert [c.name for c in tree.find("GoUse(A)").conditions] == [
-        "LastUsed==C & Zone==West",
-        "LastUsed==B & Zone==East",
+        "LastUsed==C & Zone==NE",
+        "LastUsed==B & Zone!=S",
     ]
     assert [c.name for c in tree.find("GoUse(Nearest)").conditions] == ["LastUsed==None"]
+
+
+def test_rule_condition_rejects_unknown_operator():
+    with pytest.raises(ValueError):
+        rule_condition("A", "<", "NW")

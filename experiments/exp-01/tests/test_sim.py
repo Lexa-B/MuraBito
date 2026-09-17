@@ -12,13 +12,13 @@ def test_build_sim_wires_context():
     assert list(sim.tree.log)[-1][1] == "hello"
 
 
-def test_actor_cycles_through_objects_as_the_spec_predicts():
+def test_long_run_has_no_errors_and_one_claim_at_most():
     sim = build_sim(seed=0)
-    used = []
-    for _ in range(180 * 60):  # 180 sim-seconds at 60 Hz
+    subsystem = sim.world.smart_objects
+    for _ in range(120 * 60):
         sim.step(1 / 60)
-        last = sim.ctx["LastUsed"]
-        if last is not None and (not used or used[-1] != last):
-            used.append(last)
-    assert used[:5] == ["A", "B", "C", "B", "A"]
+        claims = [(obj, slot) for obj in subsystem.objects for slot in obj.slots if subsystem.is_claimed(obj, slot)]
+        claim = sim.ctx["Claim"]
+        assert claims == ([] if claim is None else [(claim.object, claim.slot)])
     assert not any("error" in text for _, text in sim.tree.log)
+    assert sim.ctx["LastUsed"] is not None

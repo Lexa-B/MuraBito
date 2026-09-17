@@ -1,4 +1,4 @@
-"""The example StateTree for exp-00. The rules are placeholders: edit freely."""
+"""The example StateTree for exp-01. The rules are placeholders: edit freely."""
 
 from ai.statetree import ROOT, Condition, Mode, State, StateTree, Transition, Trigger
 from ai.tasks import (
@@ -12,19 +12,24 @@ from ai.tasks import (
     release_claim,
 )
 
-# For each object: the (LastUsed, Zone) pairs that send the actor to it.
+# For each object: (LastUsed, "==" or "!=", Zone) rows that send the actor to it.
+# Finishing in the last object's home zone goes forward (A->B->C->A);
+# finishing across a border goes backward.
 RULES = {
-    "A": [("C", "West"), ("B", "East")],
-    "B": [("A", "West"), ("C", "East")],
-    "C": [("B", "West"), ("A", "East")],
+    "A": [("C", "==", "NE"), ("B", "!=", "S")],
+    "B": [("A", "==", "NW"), ("C", "!=", "NE")],
+    "C": [("B", "==", "S"), ("A", "!=", "NW")],
 }
 
 
-def rule_condition(last_used, zone):
-    return Condition(
-        f"LastUsed=={last_used} & Zone=={zone}",
-        lambda ctx: ctx.get("LastUsed") == last_used and ctx.get("Zone") == zone,
-    )
+def rule_condition(last_used, op, zone):
+    if op == "==":
+        test = lambda ctx: ctx.get("LastUsed") == last_used and ctx.get("Zone") == zone
+    elif op == "!=":
+        test = lambda ctx: ctx.get("LastUsed") == last_used and ctx.get("Zone") != zone
+    else:
+        raise ValueError(f"unknown zone operator: {op!r}")
+    return Condition(f"LastUsed=={last_used} & Zone{op}{zone}", test)
 
 
 def go_use_state(name, tag_query, conditions, mode):
@@ -45,8 +50,8 @@ def go_use_state(name, tag_query, conditions, mode):
 
 def build_tree() -> StateTree:
     children = [
-        go_use_state(f"GoUse({target})", {f"Object.{target}"}, [rule_condition(*pair) for pair in pairs], Mode.ANY)
-        for target, pairs in RULES.items()
+        go_use_state(f"GoUse({target})", {f"Object.{target}"}, [rule_condition(*row) for row in rows], Mode.ANY)
+        for target, rows in RULES.items()
     ]
     children.append(go_use_state(
         "GoUse(Nearest)", set(),
