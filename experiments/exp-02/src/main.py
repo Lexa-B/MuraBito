@@ -1,6 +1,7 @@
 """exp-02 entry point. Run from experiments/exp-02: `uv run src/main.py`."""
 
 import argparse
+import random
 from pathlib import Path
 
 import pygame
@@ -12,17 +13,26 @@ from sim import build_sim
 DT = 1 / 60
 SPEEDS = (0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
 MAX_FRAME_TIME = 0.25  # avoid a catch-up spiral after a stall
+SEED_RANGE = 2**31
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="MuraBito exp-02: StateTree + wandering Smart Objects visualizer")
+    parser = argparse.ArgumentParser(description="MuraBito exp-02: StateTree + fog of war visualizer")
     parser.add_argument("--frames", type=int, default=0,
                         help="exit after N frames (0 = run until quit); each frame advances one fixed tick x speed")
     parser.add_argument("--screenshot-dir", type=Path, default=None)
     parser.add_argument("--screenshot-every", type=int, default=60)
     parser.add_argument("--speed", type=float, default=1.0, choices=SPEEDS)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--truth", action="store_true", help="start with the truth overlay on")
     return parser.parse_args(argv)
+
+
+def reset_sim(sim, new_seed=False, seed_source=None):
+    """Reset the tree (releasing claims) and rebuild: same seed, or a new random one."""
+    sim.tree.reset(sim.ctx)
+    seed = (seed_source or random.Random()).randrange(SEED_RANGE) if new_seed else sim.seed
+    return build_sim(seed)
 
 
 def main(argv=None):
@@ -37,6 +47,7 @@ def main(argv=None):
     camera.snap(actor_world_px(sim.actor))
     speed_index = SPEEDS.index(args.speed)
     paused = False
+    truth = args.truth
     accumulator = 0.0
     frame = 0
     if args.screenshot_dir is not None:
@@ -59,9 +70,10 @@ def main(argv=None):
                     speed_index = min(speed_index + 1, len(SPEEDS) - 1)
                 elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
                     speed_index = max(speed_index - 1, 0)
+                elif event.key == pygame.K_t:
+                    truth = not truth
                 elif event.key == pygame.K_r:
-                    sim.tree.reset(sim.ctx)
-                    sim = build_sim(args.seed)
+                    sim = reset_sim(sim, new_seed=bool(event.mod & pygame.KMOD_SHIFT))
                     camera.snap(actor_world_px(sim.actor))
                     accumulator = 0.0
 
@@ -75,7 +87,7 @@ def main(argv=None):
                     accumulator -= DT
             camera.follow(actor_world_px(sim.actor), frame_time)
 
-            renderer.draw(sim, camera, paused, speed)
+            renderer.draw(sim, camera, paused, speed, truth)
             pygame.display.flip()
             frame += 1
 

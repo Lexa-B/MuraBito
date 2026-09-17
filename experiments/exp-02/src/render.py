@@ -1,9 +1,12 @@
-"""Pygame drawing: the isometric hex world view and the brain panel."""
+"""Pygame drawing: the isometric hex world view (what the actor knows, plus an optional truth
+overlay) and the brain panel."""
 
 import math
 
 import pygame
 
+from ai.beliefs import LOST
+from ai.vision import SENSE_HALF_ANGLE, SENSE_RANGE, facing_angle
 from hexgrid import DIRECTIONS, all_tiles
 from smartobjects import slot_tile
 
@@ -19,6 +22,10 @@ WALL_HEIGHT = 20
 OBJECT_HEIGHT = 30
 CULL_MARGIN = 80
 
+FOG_SEEN = 0.55  # floor brightness for tiles seen before but not now
+FOG_NEVER = 0.2  # floor brightness for tiles never seen
+GHOST_ALPHA = 170  # ghost column alpha at full confidence
+
 COLORS = {
     "void": (18, 20, 26),
     "zone_NE": (104, 94, 70),
@@ -31,6 +38,8 @@ COLORS = {
     "pause": (250, 250, 250),
     "wall": (120, 118, 128),
     "outline": (30, 30, 36),
+    "truth": (235, 235, 245),
+    "cone": (255, 255, 220),
     "actor": (236, 236, 240),
     "shadow": (12, 14, 16),
     "ring_bg": (60, 60, 70),
@@ -87,94 +96,166 @@ def hex_corners(center, scale=1.0, lift=0.0):
     ]
 
 
+def fmt(tile):
+    return f"({tile[0]},{tile[1]})"
+
+
 class Renderer:
     def __init__(self, screen):
         self.screen = screen
         self.view = screen.subsurface(pygame.Rect((0, 0), VIEW_SIZE))  # clips world drawing
+        self.overlay = pygame.Surface(VIEW_SIZE, pygame.SRCALPHA)  # cone and search area
+        self.ghost = pygame.Surface((int(2 * HEX_SIZE) + 8, int(OBJECT_HEIGHT + 2 * HEX_SIZE * SQUASH) + 8), pygame.SRCALPHA)
         self.font = pygame.font.Font(None, 20)
         self.small = pygame.font.Font(None, 18)
         self.big = pygame.font.Font(None, 28)
         self.floor_tiles = sorted(all_tiles(), key=lambda t: (tile_to_world_px(t)[1], tile_to_world_px(t)[0]))
 
-    def draw(self, sim, camera, paused, speed):
-        self.draw_world(sim, camera, paused, speed)
+    def draw(self, sim, camera, paused, speed, truth=False):
+        self.draw_world(sim, camera, paused, speed, truth)
         self.draw_panel(sim)
 
     # --- world view -------------------------------------------------------
 
-    def draw_world(self, sim, camera, paused, speed):
-        view = self.view
-        world, ctx = sim.world, sim.ctx
+    def draw_world(self, sim, camera, paused, speed, truth):
+        view, overlay = self.view, self.overlay
+        world, ctx, beliefs = sim.world, sim.ctx, sim.beliefs
         to_screen = camera.world_to_screen
         view.fill(COLORS["void"])
+        overlay.fill((0, 0, 0, 0))
 
         for tile in self.floor_tiles:
             center = to_screen(tile_to_world_px(tile))
             if not self._visible(center):
                 continue
+            if tile in beliefs.visible_now:
+                fog = 1.0
+            elif tile in beliefs.last_seen:
+                fog = FOG_SEEN
+            else:
+                fog = FOG_NEVER
             base = COLORS[f"zone_{world.zone_of(tile)}"]
             corners = hex_corners(center)
-            pygame.draw.polygon(view, shade(base, 1.0 - 0.05 * ((tile[0] - tile[1]) % 3)), corners)
-            pygame.draw.polygon(view, COLORS["grid"], corners, 1)
+            pygame.draw.polygon(view, shade(base, fog * (1.0 - 0.05 * ((tile[0] - tile[1]) % 3))), corners)
+            if fog > FOG_NEVER:
+                pygame.draw.polygon(view, shade(COLORS["grid"], fog), corners, 1)
+
+        leaf = sim.tree.leaf
+        target = ctx.get("Target")
+        if leaf is not None and leaf.name == "Search" and target in beliefs.beliefs:
+            color = (*OBJECT_COLORS.get(target, COLORS["wall"]), 140)
+            for tile in beliefs.search_area(target):
+                pygame.draw.polygon(overlay, color, hex_corners(to_screen(tile_to_world_px(tile)), scale=0.8), 2)
+        self._draw_cone(sim, to_screen)
+        view.blit(overlay, (0, 0))
 
         for tile in (ctx.get("Path") or [])[1:]:
             pygame.draw.circle(view, COLORS["path"], to_screen(tile_to_world_px(tile)), 4)
 
         for obj in world.smart_objects.objects:
-            object_px = object_world_px(obj)
-            object_center = to_screen(object_px)
-            base_x, base_y = tile_to_world_px(obj.tile)
-            for slot in obj.slots:
-                tile = slot_tile(obj, slot)
-                # Slots ride along with the object's in-between position.
-                slot_x, slot_y = tile_to_world_px(tile)
-                center = to_screen((object_px[0] + slot_x - base_x, object_px[1] + slot_y - base_y))
-                color = OBJECT_COLORS.get(obj.name, COLORS["wall"]) if world.is_walkable(tile) else COLORS["slot_blocked"]
-                corners = hex_corners(center, scale=0.45)
-                if world.smart_objects.is_claimed(obj, slot):
-                    pygame.draw.polygon(view, COLORS["claimed"], corners)
-                pygame.draw.polygon(view, color, corners, 2)
-                tip = (center[0] + (object_center[0] - center[0]) * 0.35, center[1] + (object_center[1] - center[1]) * 0.35)
-                pygame.draw.line(view, color, center, tip, 2)
+            if obj.name in beliefs.seen_now:
+                self._draw_slots(world, obj, to_screen)
 
         # Raised things and the actor, back to front.
-        drawables = [(tile_to_world_px(t)[1], "wall", t) for t in world.walls]
-        drawables += [(object_world_px(o)[1], "object", o) for o in world.smart_objects.objects]
+        drawables = [(tile_to_world_px(t)[1], "wall", t) for t in beliefs.known_walls]
+        for obj in world.smart_objects.objects:
+            if obj.name in beliefs.seen_now:
+                drawables.append((object_world_px(obj)[1], "object", obj))
+            elif truth:
+                drawables.append((object_world_px(obj)[1], "truth_object", obj))
+        for name in beliefs.beliefs:
+            if name not in beliefs.seen_now and beliefs.level(name) != LOST:
+                drawables.append((tile_to_world_px(beliefs.ghost_tile(name))[1], "ghost", name))
+        if truth:
+            drawables += [(tile_to_world_px(t)[1], "truth_wall", t) for t in world.walls - beliefs.known_walls]
         actor_px = actor_world_px(sim.actor)
         drawables.append((actor_px[1] + 0.1, "actor", actor_px))
         for _, kind, item in sorted(drawables, key=lambda d: d[0]):
-            if kind == "wall":
-                center = to_screen(tile_to_world_px(item))
-                if self._visible(center):
-                    self._draw_column(center, WALL_HEIGHT, COLORS["wall"])
-            elif kind == "object":
-                center = to_screen(object_world_px(item))
-                if self._visible(center):
-                    self._draw_object(world, item, center)
-            else:
+            if kind == "actor":
                 self._draw_actor(sim, to_screen(item))
+                continue
+            if kind == "ghost":
+                center = to_screen(tile_to_world_px(beliefs.ghost_tile(item)))
+            elif kind in ("object", "truth_object"):
+                center = to_screen(object_world_px(item))
+            else:
+                center = to_screen(tile_to_world_px(item))
+            if not self._visible(center):
+                continue
+            if kind == "wall":
+                color = COLORS["wall"] if item in beliefs.visible_now else shade(COLORS["wall"], FOG_SEEN)
+                self._draw_column(view, center, WALL_HEIGHT, color)
+            elif kind == "object":
+                self._draw_object(world, item, center)
+            elif kind == "ghost":
+                self._draw_ghost(beliefs, item, center)
+            elif kind == "truth_object":
+                self._draw_outline_column(center, OBJECT_HEIGHT, OBJECT_COLORS.get(item.name, COLORS["truth"]))
+            else:
+                self._draw_outline_column(center, WALL_HEIGHT, COLORS["truth"])
 
-        status = f"{speed:g}x" + ("   PAUSED" if paused else "")
+        status = f"{speed:g}x   seed {sim.seed}" + ("   PAUSED" if paused else "") + ("   TRUTH" if truth else "")
         view.blit(self.big.render(status, True, COLORS["text"]), (12, 10))
-        hint = "Space pause  |  N step  |  +/- speed  |  R reset  |  Esc quit"
+        hint = "Space pause  |  N step  |  +/- speed  |  R reset  |  Shift+R new seed  |  T truth  |  Esc quit"
         view.blit(self.small.render(hint, True, COLORS["text_dim"]), (12, VIEW_SIZE[1] - 24))
 
     def _visible(self, point):
         x, y = point
         return -CULL_MARGIN <= x <= VIEW_SIZE[0] + CULL_MARGIN and -CULL_MARGIN <= y <= VIEW_SIZE[1] + CULL_MARGIN
 
-    def _draw_column(self, center, height, color):
+    def _draw_cone(self, sim, to_screen):
+        """Two rays at the cone edges and an arc at the sense range, drawn on the overlay."""
+        actor = sim.actor
+        origin = to_screen(actor_world_px(actor))
+        base = facing_angle(actor.facing)
+        reach = SENSE_RANGE * math.sqrt(3)  # tile centers are sqrt(3) apart in vision space
+
+        def point(angle):
+            x = reach * math.cos(math.radians(angle))
+            y = reach * math.sin(math.radians(angle))
+            return (origin[0] + x * HEX_SIZE, origin[1] + y * HEX_SIZE * SQUASH)
+
+        color = (*COLORS["cone"], 90)
+        arc = [point(base + a) for a in range(int(-SENSE_HALF_ANGLE), int(SENSE_HALF_ANGLE) + 1, 5)]
+        pygame.draw.lines(self.overlay, color, False, [origin, *arc, origin], 2)
+
+    def _draw_slots(self, world, obj, to_screen):
+        object_px = object_world_px(obj)
+        object_center = to_screen(object_px)
+        base_x, base_y = tile_to_world_px(obj.tile)
+        for slot in obj.slots:
+            tile = slot_tile(obj, slot)
+            # Slots ride along with the object's in-between position.
+            slot_x, slot_y = tile_to_world_px(tile)
+            center = to_screen((object_px[0] + slot_x - base_x, object_px[1] + slot_y - base_y))
+            color = OBJECT_COLORS.get(obj.name, COLORS["wall"]) if world.is_walkable(tile) else COLORS["slot_blocked"]
+            corners = hex_corners(center, scale=0.45)
+            if world.smart_objects.is_claimed(obj, slot):
+                pygame.draw.polygon(self.view, COLORS["claimed"], corners)
+            pygame.draw.polygon(self.view, color, corners, 2)
+            tip = (center[0] + (object_center[0] - center[0]) * 0.35, center[1] + (object_center[1] - center[1]) * 0.35)
+            pygame.draw.line(self.view, color, center, tip, 2)
+
+    def _draw_column(self, surface, center, height, color):
         ground = hex_corners(center)
         top = hex_corners(center, lift=height)
         # Visible side faces: right (5-0), lower-right (0-1), lower-left (1-2), left (2-3).
         for (a, b), factor in zip(((5, 0), (0, 1), (1, 2), (2, 3)), (0.75, 0.6, 0.5, 0.65)):
-            pygame.draw.polygon(self.view, shade(color, factor), [ground[a], ground[b], top[b], top[a]])
-        pygame.draw.polygon(self.view, color, top)
-        pygame.draw.polygon(self.view, COLORS["outline"], top, 1)
+            pygame.draw.polygon(surface, shade(color, factor), [ground[a], ground[b], top[b], top[a]])
+        pygame.draw.polygon(surface, color, top)
+        pygame.draw.polygon(surface, COLORS["outline"], top, 1)
+
+    def _draw_outline_column(self, center, height, color):
+        """A faint wireframe column, for the truth overlay."""
+        ground = hex_corners(center)
+        top = hex_corners(center, lift=height)
+        pygame.draw.polygon(self.view, shade(color, 0.8), top, 1)
+        for i in (0, 1, 2, 3, 5):
+            pygame.draw.line(self.view, shade(color, 0.6), ground[i], top[i], 1)
 
     def _draw_object(self, world, obj, center):
         view = self.view
-        self._draw_column(center, OBJECT_HEIGHT, OBJECT_COLORS.get(obj.name, COLORS["wall"]))
+        self._draw_column(view, center, OBJECT_HEIGHT, OBJECT_COLORS.get(obj.name, COLORS["wall"]))
         top = (center[0], center[1] - OBJECT_HEIGHT)
         label = self.big.render(obj.name, True, COLORS["text_active"])
         view.blit(label, label.get_rect(center=top))
@@ -188,6 +269,24 @@ class Renderer:
         if obj.pauses_during_use and world.smart_objects.is_in_use(obj):
             for dx in (-12, 8):
                 pygame.draw.rect(view, COLORS["pause"], pygame.Rect(top[0] + dx, top[1] - 34, 4, 12))
+
+    def _draw_ghost(self, beliefs, name, center):
+        """A translucent lettered column at the believed tile, fading with confidence, plus a confidence bar."""
+        confidence = beliefs.confidence(name)
+        ghost = self.ghost
+        ghost.fill((0, 0, 0, 0))
+        local = (ghost.get_width() / 2, ghost.get_height() - HEX_SIZE * SQUASH - 4)
+        self._draw_column(ghost, local, OBJECT_HEIGHT, OBJECT_COLORS.get(name, COLORS["wall"]))
+        ghost.set_alpha(int(40 + (GHOST_ALPHA - 40) * confidence))
+        self.view.blit(ghost, (center[0] - local[0], center[1] - local[1]))
+        top = (center[0], center[1] - OBJECT_HEIGHT)
+        label = self.big.render(name, True, COLORS["text_active"])
+        label.set_alpha(int(80 + 120 * confidence))
+        self.view.blit(label, label.get_rect(center=top))
+        bar = pygame.Rect(0, 0, 30, 4)
+        bar.midtop = (center[0], center[1] + HEX_SIZE * SQUASH * 0.5)
+        pygame.draw.rect(self.view, COLORS["ring_bg"], bar)
+        pygame.draw.rect(self.view, COLORS["ring"], pygame.Rect(bar.x, bar.y, round(30 * confidence), 4))
 
     def _draw_actor(self, sim, center):
         view = self.view
@@ -219,17 +318,29 @@ class Renderer:
         x0 = PANEL_RECT.x + 14
         y = self._draw_tree(sim.tree, x0, 10)
         y = self._draw_context(sim, x0, y + 8)
+        y = self._draw_beliefs(sim, x0, y + 8)
         self._draw_log(sim.tree, x0, y + 8)
 
     def _header(self, text, x, y):
         self.screen.blit(self.font.render(text, True, COLORS["header"]), (x, y))
         return y + LINE + 4
 
+    @staticmethod
+    def _collapsed(tree, state):
+        """Children of an inactive GoUse branch are hidden; only the active branch expands."""
+        parent = state.parent
+        return (
+            parent is not None and parent.parent is tree.root
+            and parent.name.startswith("GoUse(") and parent not in tree.active
+        )
+
     def _draw_tree(self, tree, x0, y):
         screen = self.screen
         y = self._header("STATE TREE", x0, y)
         marks = {True: COLORS["pass"], False: COLORS["fail"], None: COLORS["unknown"]}
         for state, depth in tree.walk():
+            if self._collapsed(tree, state):
+                continue
             is_active = bool(tree.active) and (state is tree.root or state in tree.active)
             x = x0 + depth * 16
             if is_active:
@@ -273,6 +384,22 @@ class Renderer:
         ]
         for line in lines:
             self.screen.blit(self.font.render(line, True, COLORS["text"]), (x0, y))
+            y += LINE
+        return y
+
+    def _draw_beliefs(self, sim, x0, y):
+        beliefs = sim.beliefs
+        y = self._header("BELIEFS", x0, y)
+        if not beliefs.beliefs:
+            self.screen.blit(self.small.render("(nothing seen yet)", True, COLORS["text_dim"]), (x0, y))
+            return y + LINE
+        for name in sorted(beliefs.beliefs):
+            age = "seen" if name in beliefs.seen_now else f"{beliefs.age(name):.1f}s"
+            text = (
+                f"{name}  {fmt(beliefs.ghost_tile(name)):>8}  {age:>6}  {beliefs.confidence(name):.2f}"
+                f"  {beliefs.level(name):<6}  {beliefs.speed(name):.2f}t/s"
+            )
+            self.screen.blit(self.font.render(text, True, OBJECT_COLORS.get(name, COLORS["text"])), (x0, y))
             y += LINE
         return y
 
