@@ -102,14 +102,14 @@ The engine is unchanged. Task changes:
 
 - **`FindAndClaim`:** calls `find(..., blocked_fn=lambda t: not world.is_walkable(t))`. A slot the actor is standing on counts as walkable, since the actor isn't in the blocked set.
 - **`MoveTo` chases a moving goal:**
-  - `goal_fn` is re-evaluated each time the actor completes a step onto a tile, and on the first tick.
-  - If the goal tiles changed since the last plan, it re-plans A\* from `actor.tile` and logs `replan: slot moved`.
+  - `MoveTo(goal_fn, chase=False)` takes a new `chase` flag. The GoUse states' `MoveTo(claimed_slot_goal)` uses `chase=True`. Wander's random-tile `MoveTo` keeps `chase=False`, because re-reading a random goal would pick a new tile every step.
+  - With `chase=True`, `goal_fn` is re-evaluated each time the actor is on a tile with no step in progress. If the goal tiles changed since the last plan, it re-plans A\* from `actor.tile` and logs `replan: slot moved`.
   - Before starting each step, if the next path tile isn't walkable, it re-plans from `actor.tile` and logs `replan: path blocked`.
   - It returns `FAILED` if a (re-)plan finds no path or the goal is empty.
   - It returns `SUCCEEDED` when the actor is standing on a current goal tile with no step in progress. At a claimed slot it faces `slot_facing(slot)`.
 - **`Interact`:**
   - On enter, calls `set_in_use(claim.object, True)`. On exit, calls `set_in_use(claim.object, False)`, on every exit route. It remembers the object it marked so exit clears the right one.
-  - Each tick, before counting time, returns `FAILED` if `actor.tile != slot_tile(claim.object, claim.slot)`, meaning the slot drifted away. This can only happen with objects where `pauses_during_use` is false.
+  - Each tick, before counting time, returns `FAILED` if `actor.tile != slot_tile(claim.object, claim.slot)`, meaning the slot drifted away, and logs `interact: slot drifted away`. This can only happen with objects where `pauses_during_use` is false.
 - **`ZoneEvaluator`:** unchanged. It now yields NE/S/NW.
 
 ## Example tree and rules (`src/ai/tree_def.py`)
@@ -172,7 +172,7 @@ The window, camera, panel layout, controls and headless flags are unchanged. Cha
 
 ## Sim wiring (`src/sim.py`)
 
-`Sim.step(dt)` first ticks `ObjectMover` over all objects, then ticks the StateTree. The context keys are unchanged from exp-00.
+`Sim` gains a `mover: ObjectMover` field, built with the sim's world, actor and seeded `rng`. `Sim.step(dt)` first ticks the mover over all objects, then ticks the StateTree. The context keys are unchanged from exp-00.
 
 ## Testing
 
