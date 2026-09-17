@@ -21,10 +21,12 @@ be like once there's UE to write AI for.
 ### What
 
 An isometric pygame window showing a small tile world with three placeholder
-objects (A, B, C) and a single actor. The actor's behavior is driven by a small
-**StateTree-style** engine modeled on UE5's StateTree: hierarchical states,
+objects (A, B, C) and a single actor. The objects are modeled on UE5's **Smart
+Objects**: Sims-style interactables that advertise interactions and offer slots
+the actor claims, walks to, uses, and releases. The actor's behavior is driven by a
+small **StateTree-style** engine modeled on UE5's StateTree: hierarchical states,
 enter conditions, tasks, transitions, and evaluators writing to a shared context.
-The actor paths to objects with **A\*** on the tile grid.
+The actor paths to object slots with **A\*** on the tile grid.
 
 Which object the actor goes to next depends on **where it is** (West or East zone)
 and **which object it used last**. These rules are placeholders, kept in one data
@@ -36,6 +38,6 @@ condition, the current context values, and a running transition log.
 
 ### Layout
 
-- `src/` — game loop, world model, rendering
+- `src/` — game loop, world model, Smart Objects, rendering
 - `src/ai/` — StateTree engine, tasks/evaluators, the example tree, A* pathing
-- `tests/` — pytest for pathing and the StateTree engine
+- `tests/` — pytest for pathing, Smart Objects, the StateTree engine, and the tasks
