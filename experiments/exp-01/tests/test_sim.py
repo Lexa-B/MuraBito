@@ -31,10 +31,41 @@ def watch_errors(sim):
     return errors
 
 
+def watch_drift(sim):
+    """Record 'slot drifted away' lines logged while the claimed object pauses during use.
+
+    A pausing object is frozen by the mover whenever it's in use, so its slot should
+    never drift out from under the actor mid-interaction.
+    """
+    drifts = []
+    write = sim.tree.write_log
+
+    def spy(text):
+        if text == "interact: slot drifted away":
+            claim = sim.ctx["Claim"]
+            if claim is not None and claim.object.pauses_during_use:
+                drifts.append(text)
+        write(text)
+
+    sim.tree.write_log = spy
+    sim.ctx["log"] = spy
+    return drifts
+
+
+def test_step_ticks_mover_before_tree():
+    sim = build_sim(seed=0)
+    order = []
+    sim.mover.tick = lambda dt: order.append("mover")
+    sim.tree.tick = lambda ctx, dt: order.append("tree")
+    sim.step(1 / 60)
+    assert order == ["mover", "tree"]
+
+
 @pytest.mark.parametrize("seed", range(5))
 def test_long_run_invariants(seed):
     sim = build_sim(seed)
     errors = watch_errors(sim)
+    drifts = watch_drift(sim)
     subsystem = sim.world.smart_objects
     for _ in range(120 * 60):
         sim.step(1 / 60)
@@ -46,7 +77,14 @@ def test_long_run_invariants(seed):
             object_tiles = {obj.tile, obj.next_tile} - {None}
             assert all(zone_of(t) == obj.home_zone for t in object_tiles)
             assert not object_tiles & actor_tiles
+        leaf = sim.tree.leaf
+        in_use = [o for o in subsystem.objects if subsystem.is_in_use(o)]
+        if leaf is not None and leaf.name == "Interact" and claim is not None:
+            assert in_use == [claim.object]
+        else:
+            assert in_use == []
     assert errors == []
+    assert drifts == []
 
 
 def test_all_objects_get_used_within_a_minute_on_seed_0():
