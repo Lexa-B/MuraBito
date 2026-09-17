@@ -38,12 +38,13 @@ def go_use_state(name, tag_query, conditions, mode):
             Transition(Trigger.ON_COMPLETED, f"{name}/MoveTo"),
             Transition(Trigger.ON_FAILED, "Wander"),
         ]),
-        State("MoveTo", task=MoveTo(claimed_slot_goal), transitions=[
+        State("MoveTo", task=MoveTo(claimed_slot_goal, chase=True), transitions=[
             Transition(Trigger.ON_COMPLETED, f"{name}/Interact"),
             Transition(Trigger.ON_FAILED, "Wander"),
         ]),
         State("Interact", task=Interact(), transitions=[
             Transition(Trigger.ON_COMPLETED, ROOT),
+            Transition(Trigger.ON_FAILED, ROOT),
         ]),
     ])
 

@@ -1,5 +1,6 @@
 import pytest
 
+from ai.statetree import ROOT, Trigger
 from ai.tree_def import build_tree, rule_condition
 
 # Copied from the spec's rules table.
@@ -51,3 +52,12 @@ def test_condition_names_are_readable():
 def test_rule_condition_rejects_unknown_operator():
     with pytest.raises(ValueError):
         rule_condition("A", "<", "NW")
+
+
+def test_go_use_chases_and_interact_failure_returns_to_root():
+    tree = build_tree()
+    for name in ["GoUse(A)", "GoUse(B)", "GoUse(C)", "GoUse(Nearest)"]:
+        assert tree.find(f"{name}/MoveTo").task.chase is True
+        transitions = [(t.trigger, t.target) for t in tree.find(f"{name}/Interact").transitions]
+        assert transitions == [(Trigger.ON_COMPLETED, ROOT), (Trigger.ON_FAILED, ROOT)]
+    assert tree.find("Wander/MoveTo").task.chase is False

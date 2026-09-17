@@ -47,3 +47,13 @@ def test_long_run_invariants(seed):
             assert all(zone_of(t) == obj.home_zone for t in object_tiles)
             assert not object_tiles & actor_tiles
     assert errors == []
+
+
+def test_all_objects_get_used_within_a_minute_on_seed_0():
+    sim = build_sim(seed=0)
+    used = set()
+    for _ in range(60 * 60):
+        sim.step(1 / 60)
+        if sim.ctx["LastUsed"] is not None:
+            used.add(sim.ctx["LastUsed"])
+    assert used == {"A", "B", "C"}
