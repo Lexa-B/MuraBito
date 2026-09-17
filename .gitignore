@@ -1,0 +1,13 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local artifacts
+screenshots/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
