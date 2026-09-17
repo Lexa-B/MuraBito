@@ -73,14 +73,18 @@ Starts as a copy of exp-00: same hex map, camera, StateTree engine, Smart Object
 - **Three zones.** The map is split into three 120° sectors (NE, S, NW).
 - **Wandering objects.** Each Smart Object wanders inside its own zone, with stochastic momentum. It usually keeps its heading, and sharper turns are less likely. Slots ride along with their object and can poke across a zone border.
 - **Chasing.** The actor re-plans when its claimed slot moves or its path gets blocked.
-- **Pausing.** Some objects hold still while in use. The others keep moving, and the interaction fails if the slot drifts away.
+- **Pausing.** A and B hold still while in use. C keeps moving, and the interaction fails if its slot drifts away.
 - **Rules.** The placeholder rules still key on the last object used and the actor's zone. Finishing in that object's home zone moves forward (A→B→C), and finishing across a border moves backward.
 
 ### Layout
 
 - `src/`: same as exp-00, plus `wander.py`, the stochastic object mover.
 - `src/ai/`: same as exp-00. `tasks.py` gains chasing, re-planning and in-use tracking.
-- `tests/`: same as exp-00, plus `test_wander.py`. The sim tests check invariants over seeded runs instead of a fixed cycle.
+- `tests/`: same as exp-00, plus `test_wander.py`. The sim tests check invariants over seeded runs instead of a fixed cycle: claims, in-use, zones, overlaps and step order.
+
+### Open questions
+
+Three design and tuning questions from the final review are listed in the spec's "Open questions" section: the slot marker during a mid-step pause, claims abandoned on brief blocks and C's drift-failure rate, and wall placement.
 
 ### Controls
 

@@ -209,9 +209,11 @@ TDD with pytest (`pythonpath = ["src"]`). The copied exp-00 tests are kept and u
   - `ctx["Claim"]` is that claim, or None;
   - no `error` log lines appear;
   - every object is in its home zone;
-  - no object's `tile` or `next_tile` equals the actor's `tile` or `next_tile`.
+  - no object's `tile` or `next_tile` equals the actor's `tile` or `next_tile`;
+  - while the active leaf is `Interact` with a claim, exactly the claimed object is in use, and otherwise no object is;
+  - no `interact: slot drifted away` line is logged for an object with `pauses_during_use`.
 
-  On seed 0, all of A, B and C get used at least once within a bounded number of sim-seconds, fixed in the plan once measured.
+  On seed 0, all of A, B and C get used at least once within 60 sim-seconds. A separate test checks that `Sim.step` ticks the mover before the tree.
 - **Visual check:** a headless screenshot run, as in exp-00, confirming:
   - three zone tints;
   - objects moving between screenshots and staying in their zones;
@@ -219,6 +221,21 @@ TDD with pytest (`pythonpath = ["src"]`). The copied exp-00 tests are kept and u
   - path dots changing after re-plans;
   - `replan:` log lines;
   - a pause marker on A or B while in use.
+
+## Open questions
+
+Raised by the final whole-branch review (2026-09-17) and left open on purpose. Each needs a design or tuning decision, not a bug fix.
+
+1. **Slot marker while a pausing object is frozen mid-step.**
+   - The claimed slot's logical tile stays under the actor, so the drift check passes.
+   - But slot markers are drawn at the object's interpolated position, so the marker can appear up to one tile away from the actor.
+   - Options: draw an in-use object's slot markers at the logical `slot_tile`, or accept the offset.
+2. **Claims abandoned on brief blocks.**
+   - Following this spec, `MoveTo` fails as soon as a re-plan finds no path. The block usually clears within about 0.67 s: the object stepping onto its own claimed slot, or a slot drifting onto a wall.
+   - Each failure costs a full Wander walk plus a 1 s wait.
+   - Separately, C never pauses, so most attempts to use C fail by drift: about 61% in long seeded runs.
+   - Whether to wait out brief blocks, or retune C's movement, is open.
+3. **Wall placement.** Some placeholder wall spots can block both of an object's slots at once: C against the `(8, -6..-3)` column, and B in the row-9 corridor. This causes most failed claims. The layout is a placeholder.
 
 ## Out of scope
 
