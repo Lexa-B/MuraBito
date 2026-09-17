@@ -462,3 +462,13 @@ TDD with pytest (`pythonpath = ["src"]`). The copied exp-01 tests are kept and u
 - Senses other than sight; any LLM integration.
 - Changes to exp-01, or to exp-01's open questions.
 - Manual camera control, sound, save/load.
+
+## Amendments from planning (2026-09-18)
+
+Found while running the implementation plan's code in a scratchpad; the plan (`docs/plans/2026-09-18-exp-02-fog-of-war-plan.md`, "Differences from the spec") has the full list. The behavioral ones:
+
+- **Vision:** touching shadows merge, so there is no zero-width gap between adjacent blockers; the tie rule applies to the edges of merged shadows. Blockers outside the cone still cast shadows into it. `SENSE_RANGE` and `SENSE_HALF_ANGLE` live in `ai/vision.py`.
+- **Perception:** an object also counts as seen when its `next_tile` is in view. Without this, an object stepping from out of view into a tile next to the actor could collide with the actor stepping into the same tile (found by the long-run sim invariants).
+- **Map generation:** an object may not start on an earlier object's slot tile.
+- **Frontier:** never the actor's own tile.
+- **ChooseTarget** clears `Target` on enter.
