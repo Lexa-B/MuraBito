@@ -17,7 +17,7 @@ Written 2026-09-18 at the end of the session that built exp-00 and exp-01. This 
 
 - **`main`** is at `5a072b1`, pushed to `github.com/Lexa-B/MuraBito` (public, MIT). The working tree is clean.
 - **Test suites:** exp-00 passes 88 tests and exp-01 passes 150 (`uv run pytest` from each experiment dir).
-- **A stale remote branch, `exp-00-impl`,** is left over (already merged). The user hasn't said whether to delete it.
+- **`main` is the only branch,** locally and on GitHub. The merged `exp-00-impl` and `exp-01-impl` branches have been deleted.
 - **`.superpowers/sdd/`** at the repo root is scratch space for subagent-driven development. It ignores itself through its own `.gitignore` and is empty now.
 
 ## How exp-00 and exp-01 were built
