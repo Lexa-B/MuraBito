@@ -7,7 +7,7 @@ No world or Smart Object imports: everything here comes from observations.
 import math
 from dataclasses import dataclass
 
-from hexgrid import DIRECTIONS, MAP_RADIUS, Tile, add, direction_index, in_bounds
+from hexgrid import DIRECTIONS, MAP_RADIUS, Tile, add, all_tiles, direction_index, distance, in_bounds
 from zones import zone_of
 
 POINT = "POINT"  # the ghost tile is a usable goal
@@ -21,6 +21,8 @@ RADIUS_FACTOR = 2.0  # the uncertainty radius grows at speed x this
 POINT_RADIUS = 5.0  # tiles: POINT while the radius is at most this
 LOST_RADIUS = 13.0  # tiles: LOST once the radius is more than this
 RETRACTED_RADIUS = POINT_RADIUS + 0.01  # radius floor after negative evidence: just past POINT
+CLEAR_DISTANCE = 2.0  # tiles: a tile seen empty stays cleared until the object could cover this
+EXPLORE_MIN_DISTANCE = 3  # tiles: prefer never-seen frontier tiles at least this far away
 
 
 @dataclass(frozen=True)
@@ -168,3 +170,65 @@ class BeliefStore:
         """Names of believed objects carrying every tag in the query, sorted."""
         query = set(tag_query)
         return sorted(name for name, belief in self.beliefs.items() if query <= belief.tags)
+
+    # --- the believed map ----------------------------------------------------
+
+    def object_blocked(self) -> set[Tile]:
+        """Tiles believed occupied: POINT ghosts, and the next tile of objects seen mid-step this tick."""
+        blocked = set()
+        for name, belief in self.beliefs.items():
+            if self.level(name) == POINT:
+                blocked.add(self.ghost_tile(name))
+            if name in self.seen_now and belief.datum_next_tile is not None:
+                blocked.add(belief.datum_next_tile)
+        return blocked
+
+    def is_walkable(self, tile: Tile) -> bool:
+        """In bounds, not a known wall, not believed occupied. Never-seen tiles are walkable."""
+        if not in_bounds(tile, self.radius) or tile in self.known_walls:
+            return False
+        return tile not in self.object_blocked()
+
+    def walkable_tiles(self) -> list[Tile]:
+        blocked = self.object_blocked() | self.known_walls
+        return [t for t in all_tiles(self.radius) if t not in blocked]
+
+    # --- searching and exploring ---------------------------------------------
+
+    def is_cleared(self, name: str, tile: Tile) -> bool:
+        """Seen since the object was last seen, recently enough that it is unlikely to be back."""
+        seen = self.last_seen.get(tile)
+        if seen is None or seen <= self.beliefs[name].datum_time:
+            return False
+        return (self.now - seen) * self.speed(name) * RADIUS_FACTOR < CLEAR_DISTANCE
+
+    def search_area(self, name: str) -> list[Tile]:
+        """Uncleared tiles within the uncertainty radius of the ghost, in the zone it was last seen
+        in and not known walls, nearest the ghost first."""
+        belief = self.beliefs[name]
+        ghost = self.ghost_tile(name)
+        radius = self.uncertainty_radius(name)
+        area = [
+            t for t in all_tiles(self.radius)
+            if distance(t, ghost) <= radius
+            and zone_of(t) == belief.datum_zone
+            and t not in self.known_walls
+            and not self.is_cleared(name, t)
+        ]
+        area.sort(key=lambda t: (distance(t, ghost), t))
+        return area
+
+    def frontier(self, actor_tile: Tile) -> Tile | None:
+        """Where to explore next: the nearest never-seen tile at least EXPLORE_MIN_DISTANCE away,
+        else the nearest never-seen tile, else the tile seen longest ago. Never a tile in view."""
+        candidates = [t for t in self.walkable_tiles() if t not in self.visible_now and t != actor_tile]
+        never = [t for t in candidates if t not in self.last_seen]
+        by_distance = lambda t: (distance(t, actor_tile), t)
+        far = [t for t in never if distance(t, actor_tile) >= EXPLORE_MIN_DISTANCE]
+        if far:
+            return min(far, key=by_distance)
+        if never:
+            return min(never, key=by_distance)
+        if candidates:
+            return min(candidates, key=lambda t: (self.last_seen[t], distance(t, actor_tile), t))
+        return None
