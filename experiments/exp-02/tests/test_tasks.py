@@ -316,6 +316,19 @@ def test_search_gives_up_when_every_area_tile_is_cleared():
     assert log[-1] == "search: give up on A"
 
 
+def test_search_releases_a_held_claim_when_it_gives_up():
+    obj = make_object()
+    ctx, world, log = make_ctx(obj)
+    claimed_at_slot(ctx, obj)
+    ctx["beliefs"].beliefs["A"].radius_floor = LOST_RADIUS + 1
+    search = Search()
+    search.enter(ctx)
+    assert search.tick(ctx, 0.1) is Status.FAILED
+    assert ctx["Claim"] is None
+    assert not world.smart_objects.is_claimed(obj, obj.slots[0])
+    assert log == ["release A / slot 0", "search: give up on A"]
+
+
 # --- Explore --------------------------------------------------------------------
 
 

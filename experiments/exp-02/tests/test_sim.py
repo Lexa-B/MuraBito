@@ -85,6 +85,7 @@ def test_long_run_invariants(seed):
         claim = sim.ctx["Claim"]
         assert live == ([] if claim is None else [claim])
         assert sim.body.claimed_slot() == claim
+        assert claim is None or claim[0] == sim.ctx["Target"]
 
         actor_tiles = {sim.actor.tile, sim.actor.next_tile} - {None}
         for obj in subsystem.objects:

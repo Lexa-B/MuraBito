@@ -180,6 +180,7 @@ class Search(MoveTo):
         area = beliefs.search_area(name) if name in beliefs.beliefs and beliefs.level(name) != LOST else []
         area = [t for t in area if t != actor.tile]
         if not area:
+            drop_claim(ctx)
             ctx["log"](f"search: give up on {name}")
             return Status.FAILED
         if self.tile not in area or self.path is None or self.index == len(self.path) - 1:
@@ -190,6 +191,7 @@ class Search(MoveTo):
                 self.goals = set(area)
                 self._plan(ctx)
                 if self.path is None:
+                    drop_claim(ctx)
                     ctx["log"](f"search: give up on {name}")
                     return Status.FAILED
                 self.tile = self.path[-1]
@@ -298,11 +300,16 @@ def random_tile_goal(ctx):
     return {ctx["rng"].choice(ctx["beliefs"].walkable_tiles())}
 
 
-def release_claim(ctx):
-    """on_exit hook for GoUse states: frees the claim and drops the intention, however the state ended."""
+def drop_claim(ctx):
+    """Frees a held claim, if any, through the body, and logs the release."""
     claim = ctx.get("Claim")
     if claim is not None:
         ctx["body"].release()
         ctx["log"](f"release {claim[0]} / slot {claim[1]}")
         ctx["Claim"] = None
+
+
+def release_claim(ctx):
+    """on_exit hook for GoUse states: frees the claim and drops the intention, however the state ended."""
+    drop_claim(ctx)
     ctx["Target"] = None
