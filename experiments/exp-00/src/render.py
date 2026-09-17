@@ -10,6 +10,7 @@ WINDOW_SIZE = (1600, 900)
 VIEW_SIZE = (1180, 900)
 PANEL_RECT = pygame.Rect(1180, 0, 420, 900)
 LINE = 17
+LOG_LINES = 12
 
 HEX_SIZE = 64 / math.sqrt(3)  # corner radius; a pointy-top hex is sqrt(3) * size = 64px across
 SQUASH = 0.6  # vertical squash for the tilted look
@@ -178,8 +179,74 @@ class Renderer:
             label = self.small.render(interaction.name, True, COLORS["text"])
             view.blit(label, label.get_rect(midbottom=(head[0], head[1] - 22)))
 
-    # --- brain panel (completed in Task 8) --------------------------------
+    # --- brain panel ------------------------------------------------------
 
     def draw_panel(self, sim):
         pygame.draw.rect(self.screen, COLORS["panel"], PANEL_RECT)
         pygame.draw.line(self.screen, COLORS["panel_edge"], PANEL_RECT.topleft, PANEL_RECT.bottomleft, 2)
+        x0 = PANEL_RECT.x + 14
+        y = self._draw_tree(sim.tree, x0, 10)
+        y = self._draw_context(sim, x0, y + 8)
+        self._draw_log(sim.tree, x0, y + 8)
+
+    def _header(self, text, x, y):
+        self.screen.blit(self.font.render(text, True, COLORS["header"]), (x, y))
+        return y + LINE + 4
+
+    def _draw_tree(self, tree, x0, y):
+        screen = self.screen
+        y = self._header("STATE TREE", x0, y)
+        marks = {True: COLORS["pass"], False: COLORS["fail"], None: COLORS["unknown"]}
+        for state, depth in tree.walk():
+            is_active = bool(tree.active) and (state is tree.root or state in tree.active)
+            x = x0 + depth * 16
+            if is_active:
+                pygame.draw.rect(screen, COLORS["active_row"], pygame.Rect(PANEL_RECT.x + 6, y - 1, PANEL_RECT.w - 12, LINE))
+            label = state.name
+            if len(state.conditions) > 1:
+                label += f"  ({state.mode.value} of)"
+            if state is tree.leaf and tree.last_status is not None:
+                label += f"   [{tree.last_status.value}]"
+            color = COLORS["text_active"] if is_active else COLORS["text_dim"]
+            screen.blit(self.font.render(label, True, color), (x, y))
+            y += LINE
+            for condition in state.conditions:
+                cx, cy = x + 22, y + LINE // 2 - 1
+                width = 1 if condition.last_result is None else 0
+                pygame.draw.circle(screen, marks[condition.last_result], (cx, cy), 4, width)
+                screen.blit(self.small.render(condition.name, True, COLORS["text_dim"]), (cx + 10, y))
+                y += LINE
+        return y
+
+    def _draw_context(self, sim, x0, y):
+        ctx, tree = sim.ctx, sim.tree
+        y = self._header("CONTEXT", x0, y)
+        claim = ctx.get("Claim")
+        interaction = ctx.get("Interaction")
+        path = ctx.get("Path")
+        claim_text = f"{claim.object.name} / slot {claim.slot.index}" if claim is not None else "None"
+        if interaction is not None:
+            interaction_text = f"{interaction.name} {ctx.get('InteractionElapsed', 0.0):.1f} / {interaction.duration:.1f}s"
+        else:
+            interaction_text = "None"
+        path_text = f"{len(path) - 1} tiles" if path else "None"
+        leaf_text = tree.leaf.path if tree.leaf is not None else "(idle)"
+        status_text = tree.last_status.value if tree.last_status is not None else "-"
+        lines = [
+            f"Zone: {ctx.get('Zone')}    LastUsed: {ctx.get('LastUsed')}",
+            f"Target: {ctx.get('Target')}    Claim: {claim_text}",
+            f"Interaction: {interaction_text}",
+            f"Path: {path_text}",
+            f"Task: {leaf_text}  [{status_text}]",
+        ]
+        for line in lines:
+            self.screen.blit(self.font.render(line, True, COLORS["text"]), (x0, y))
+            y += LINE
+        return y
+
+    def _draw_log(self, tree, x0, y):
+        y = self._header("TRANSITION LOG", x0, y)
+        for time, text in list(tree.log)[-LOG_LINES:]:
+            self.screen.blit(self.small.render(f"{time:7.1f}s  {text}", True, COLORS["text_dim"]), (x0, y))
+            y += LINE
+        return y
