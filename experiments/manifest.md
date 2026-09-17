@@ -50,3 +50,42 @@ Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) �
 ### Headless
 
 `cd experiments/exp-00 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --speed S --screenshot-dir screenshots --screenshot-every K` (screenshots/ is gitignored).
+
+---
+
+## exp-01 — Wandering Smart Objects
+
+- **Started:** 2026-09-17
+- **Stack:** Python 3.13 + pygame, managed with uv
+- **Run:** `cd experiments/exp-01 && uv run src/main.py`
+- **Test:** `cd experiments/exp-01 && uv run pytest`
+- **Design:** [`exp-01/docs/specs/2026-09-17-exp-01-wandering-objects-design.md`](exp-01/docs/specs/2026-09-17-exp-01-wandering-objects-design.md)
+
+### Why
+
+Built on exp-00. It's almost the same, but the targets slowly wander around.
+
+### What
+
+Starts as a copy of exp-00: same hex map, camera, StateTree engine, Smart Objects, A\* pathing and brain panel.
+
+**What changes:**
+- **Three zones.** The map is split into three 120° sectors (NE, S, NW).
+- **Wandering objects.** Each Smart Object wanders inside its own zone, with stochastic momentum. It usually keeps its heading, and sharper turns are less likely. Slots ride along with their object and can poke across a zone border.
+- **Chasing.** The actor re-plans when its claimed slot moves or its path gets blocked.
+- **Pausing.** Some objects hold still while in use. The others keep moving, and the interaction fails if the slot drifts away.
+- **Rules.** The placeholder rules still key on the last object used and the actor's zone. Finishing in that object's home zone moves forward (A→B→C), and finishing across a border moves backward.
+
+### Layout
+
+- `src/`: same as exp-00, plus `wander.py`, the stochastic object mover.
+- `src/ai/`: same as exp-00. `tasks.py` gains chasing, re-planning and in-use tracking.
+- `tests/`: same as exp-00, plus `test_wander.py`. The sim tests check invariants over seeded runs instead of a fixed cycle.
+
+### Controls
+
+Same as exp-00: Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) · R reset · Esc quit.
+
+### Headless
+
+`cd experiments/exp-01 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --speed S --screenshot-dir screenshots --screenshot-every K` (screenshots/ is gitignored).
