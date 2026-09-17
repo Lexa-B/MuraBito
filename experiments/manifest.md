@@ -39,6 +39,14 @@ condition, the current context values, and a running transition log.
 
 ### Layout
 
-- `src/` — game loop, hex grid, world model, Smart Objects, camera, rendering
+- `src/` — game loop, hex grid, world model, Smart Objects, camera, rendering, starting layout (`layout.py`), sim wiring (`sim.py`)
 - `src/ai/` — StateTree engine, tasks/evaluators, the example tree, A* pathing
-- `tests/` — pytest for the hex grid, world zones, pathing, Smart Objects, the StateTree engine, and the tasks
+- `tests/` — pytest for the hex grid, world zones, pathing, Smart Objects, the StateTree engine, the tasks, the starting layout, the tree definition, the sim cycle, and the headless main loop
+
+### Controls
+
+Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) · R reset · Esc quit.
+
+### Headless
+
+`cd experiments/exp-00 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --speed S --screenshot-dir screenshots --screenshot-every K` (screenshots/ is gitignored).
