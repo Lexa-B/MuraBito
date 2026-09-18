@@ -333,3 +333,16 @@ TDD with pytest (`pythonpath = ["src"]`).
 - Actors other than the camera; manual camera control; time-scale controls.
 - Water, rivers, paddies; weather; sound; save/load.
 - Merging with exp-00 to exp-02 (exp-05).
+
+## Amendments from planning (2026-09-18)
+
+Found while running the implementation plan's code in a scratchpad. The plan (`docs/plans/2026-09-18-exp-03-tiered-hex-world-plan.md`, "Differences from the spec") has the full list. The behavioural ones:
+
+- **Cracks between tiers: geomorphing, not skirts.** Each vertex also stores the coarser tier's mesh height at its position, and the vertex shader blends toward it between 1.3 and 2.0 parent widths from the loader focus. A loader's window edge is never nearer than 2.26 parent widths (measured at every level), so at every window edge the finer tier matches the coarser mesh exactly. Props blend the same way.
+- **The tier partition.** Where tier *t* is drawn, a point belongs to the level-*L* cell `tier_cell(x, z, t, L)`: round to the nearest tier-*t* cell, then take owners upward. At the shaku tier this is exactly the address. Both sides of every handover use the same test, so tiers meet without gaps or overlaps.
+- **Chunk meshes** draw every triangle that touches one of the chunk's owned cells; the fragment shader clips them to the owned territory.
+- **The load queue** stops before a chunk whose level's mean generation time would take the frame past 8 ms, but always loads at least one. Measured: a median frame of 7.7 ms, and a worst frame of 24 ms at a cho crossing (one ken chunk).
+- **Hex lines** get their width from the pixel footprint across the edge. They fade out where the bordered cells are only a few pixels deep, and a tier's own grid fades where its cells get small, so distant borders do not wash over the horizon.
+- **Placeholder tuning:** at most 0.05 trees per ken (0.15 made a closed canopy that hid the horizon), forest density `1.8 n - 0.1`, and a dirt threshold of -0.17 (measured 30%).
+- **Modules:** `chunkgeom.py` (chunk templates, built once per level) and `chunkgen.py` (chunk contents) are split out of `terrain.py`. `owner` has no numpy twin: templates are computed once from `hexaddr`, because ownership is the same for every parent at a level.
+- **Rail start:** the rail starts on the centre of ri (4, 0), heading due north along a column of ken edges, so the shaku window changes many times a second for the first stretch. This is correct behaviour for that alignment, not a bug.

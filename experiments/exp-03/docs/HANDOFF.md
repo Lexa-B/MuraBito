@@ -1,3 +1,5 @@
+> **Superseded.** exp-03 has since been designed and built on branch `worktree-exp-03-impl` (2026-09-18); this file records the state *before* that work and is kept for history. Current documents: the spec (`docs/specs/2026-09-18-exp-03-tiered-hex-world-design.md`), the plan (`docs/plans/2026-09-18-exp-03-tiered-hex-world-plan.md`) and the exp-03 entry in `experiments/manifest.md`.
+
 # exp-03 handoff
 
 Written 2026-09-18 at the end of the session that built exp-02. This file holds the context a fresh session needs that **isn't** already in `AGENTS.md`, `experiments/manifest.md`, or the experiment specs. Read those first; this file doesn't repeat them.

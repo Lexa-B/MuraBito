@@ -143,18 +143,37 @@ Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) �
 
 ---
 
-## exp-03
+## exp-03 — Tiered hex world
 
 - **Started:** 2026-09-18
-- **Stack:** Python 3.13 + pygame, managed with uv
+- **Stack:** Python 3.13 + pygame + moderngl (OpenGL 3.3) + numpy, managed with uv
 - **Run:** `cd experiments/exp-03 && uv run src/main.py`
 - **Test:** `cd experiments/exp-03 && uv run pytest`
-- **Design:** not written yet
+- **Design:** [`exp-03/docs/specs/2026-09-18-exp-03-tiered-hex-world-design.md`](exp-03/docs/specs/2026-09-18-exp-03-tiered-hex-world-design.md)
 
 ### Why
 
-Not decided yet.
+Groundwork for tiered pathfinding: fine A\* only close in, coarser regions further out. exp-03 builds the hierarchical coordinate system at historical Japanese scale, and a procedural world that loads in tiers of detail around whoever needs it. There is no pathfinding yet. exp-05 will merge this into the exp-00 to exp-02 line.
 
 ### What
 
-Starts as a copy of exp-02. What changes is not decided yet.
+A new line. From exp-02 it keeps only the scaffolding: the uv project, the shape of the main loop, and the axial hex maths.
+
+- **Units.** shaku (10/33 m, flat to flat), ken = 6 shaku, cho = 60 ken, ri = 36 cho. Every level is a hex grid with the same orientation. A parent owns the children nearest its centre, and split children go to exactly one owner, so every ken owns 36 shaku, every cho 3,600 ken and every ri 1,296 cho. Every position has a `ri / cho / ken / shaku` address.
+- **World.** A hexagon of radius 12 ri: about 98 km across and 6,270 km², the size of a typical prefecture. Gentle country with mountains around the rim; grass, dirt, bare rock and snow; woods and clearings; trees, rocks, grass tufts and pebbles.
+- **Tiers.** Any loader (for now only the camera) gets shaku detail in its ken plus 3 rings, ken detail in its cho plus 3 rings, cho detail in its ri plus 3 rings, and ri detail across the whole world. A queue loads the chunks nearest first, within a time budget per frame. Each finer tier blends into the coarser one before its window edge, so tiers meet without cracks.
+- **View.** A 3D camera on a rail: a circle of radius 4 ri round the world centre at 2.5 m/s, about 11 h per lap. Every tier's cell borders are drawn on the ground. A side panel shows the camera's address, per-tier stats and the load windows.
+
+### Layout
+
+- `src/`: `hexgrid.py` (kept), `hexaddr.py` (units, ownership, addresses), `noise.py`, `terrain.py` (height, ground type, forests), `chunkgeom.py` (chunk templates and meshes), `chunkgen.py` (chunk contents and props), `loading.py` (loaders, windows, the load queue), `rail.py`, `main.py`.
+- `src/gfx/`: the moderngl context, the renderer, the GLSL shaders, prop meshes and the panel.
+- `tests/`: one file per module. `test_gfx.py` checks the shader's hex maths against `hexaddr` on real renders; it skips itself when no GL context is available.
+
+### Controls
+
+Space pause/resume · Esc quit. The camera cannot be steered.
+
+### Headless
+
+`cd experiments/exp-03 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --seed K --start S --screenshot-dir screenshots --screenshot-every M`. `--no-preload` shows the world loading in; `screenshots/` is gitignored. Headless runs need a GPU driver with EGL.
