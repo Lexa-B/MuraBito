@@ -140,3 +140,21 @@ Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) �
 ### Headless
 
 `cd experiments/exp-02 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --speed S --seed K --truth --screenshot-dir screenshots --screenshot-every M` (screenshots/ is gitignored; `--truth` is optional).
+
+---
+
+## exp-03
+
+- **Started:** 2026-09-18
+- **Stack:** Python 3.13 + pygame, managed with uv
+- **Run:** `cd experiments/exp-03 && uv run src/main.py`
+- **Test:** `cd experiments/exp-03 && uv run pytest`
+- **Design:** not written yet
+
+### Why
+
+Not decided yet.
+
+### What
+
+Starts as a copy of exp-02. What changes is not decided yet.
