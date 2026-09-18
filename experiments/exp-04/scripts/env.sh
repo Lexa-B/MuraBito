@@ -31,3 +31,24 @@ require_no_running_editor() {
     exit 1
   fi
 }
+
+# Windowed runs need the desktop session's display. A shell whose parent process lives outside
+# the graphical session (for example a terminal multiplexer server started as a systemd user
+# service) has no DISPLAY or WAYLAND_DISPLAY, and the engine then crashes during RHI init. Fill
+# them in from the systemd user environment, which the desktop session exports.
+require_display() {
+  if [[ -n "${DISPLAY-}" || -n "${WAYLAND_DISPLAY-}" ]]; then
+    return
+  fi
+  local line
+  while IFS= read -r line; do
+    case "$line" in
+      DISPLAY=*|WAYLAND_DISPLAY=*|XAUTHORITY=*) export "$line" ;;
+    esac
+  done < <(systemctl --user show-environment 2>/dev/null || true)
+  if [[ -z "${DISPLAY-}" && -z "${WAYLAND_DISPLAY-}" ]]; then
+    echo "error: no DISPLAY or WAYLAND_DISPLAY here or in the systemd user session; run from a desktop terminal" >&2
+    exit 1
+  fi
+  echo "note: using the desktop session's display (DISPLAY=${DISPLAY-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY-})" >&2
+}
