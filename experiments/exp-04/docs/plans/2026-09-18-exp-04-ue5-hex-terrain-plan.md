@@ -18,6 +18,7 @@
 - Only what's needed to build, run and develop goes in git. `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/` and generated IDE files are ignored.
 - `UE_ROOT` defaults to `/home/lexa/DevProjects/_GameDev/_GameEngines/UnrealEngine/5.8.2` and can be overridden from the environment.
 - The experiment root is `EXP=/home/lexa/DevProjects/_GameDev/MuraBito/.claude/worktrees/exp-04/experiments/exp-04`, on branch `worktree-exp-04` of the worktree `/home/lexa/DevProjects/_GameDev/MuraBito/.claude/worktrees/exp-04`. **Always use absolute paths. Every git command is `git -C /home/lexa/DevProjects/_GameDev/MuraBito/.claude/worktrees/exp-04 …`.** Never touch the main checkout at `/home/lexa/DevProjects/_GameDev/MuraBito`. Before each commit, run `git -C <worktree> rev-parse --abbrev-ref HEAD` and check that it prints `worktree-exp-04`.
+- **Never kill, signal, or otherwise interfere with any process you did not start yourself**, above all an `UnrealEditor` the user has open. If a running process blocks a build or test (for example `build.sh` refusing because an editor is running), stop and report BLOCKED, naming the process. The user closes it. Don't work around it.
 - Use `rg` (ripgrep), not `grep`, in scripts and commands. In `rg`, `-E` means encoding, so don't use it for regex.
 - Commit messages start with `exp-04: ` and end with the trailer `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 - The UE coordinate convention in this project: X is forward (up the screen at camera yaw 0), Y is right, Z is up, and the unit is cm.
@@ -256,6 +257,19 @@ for f in "$EDITOR" "$EDITOR_CMD" "$BUILD_SH"; do
     exit 1
   fi
 done
+
+# Refuse to build while any Unreal Editor is running. A running editor makes rebuilt modules
+# load under a new hot-reload name, so tests would silently run stale code. Close the editor
+# yourself; these scripts never stop it for you.
+require_no_running_editor() {
+  local running
+  running=$(pgrep -a -f '/UnrealEditor(-Cmd)?( |$)' || true)
+  if [[ -n "$running" ]]; then
+    echo "error: an Unreal Editor is running. Close it, then retry:" >&2
+    echo "$running" >&2
+    exit 1
+  fi
+}
 ```
 
 `scripts/build.sh`:
@@ -264,6 +278,7 @@ done
 #!/usr/bin/env bash
 # Build the editor target (Development, Linux). Extra args go to UnrealBuildTool.
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+require_no_running_editor
 "$BUILD_SH" MuraBitoEditor Linux Development -Project="$PROJECT" -WaitMutex "$@"
 ```
 
@@ -364,6 +379,18 @@ Expected: `passed: 1  failed: 0`, `TESTS PASSED`, exit 0.
 
 Also run: `$EXP/scripts/test.sh MuraBito.DoesNotExist`
 Expected: `passed: 0`, `TESTS FAILED`, exit 1. A filter that matches nothing must not count as a pass.
+
+Then check the running-editor guard with a stand-in process you start yourself (it only borrows the name):
+
+```bash
+bash -c 'exec -a /tmp/fake/UnrealEditor sleep 60' &
+FAKE=$!
+sleep 1
+$EXP/scripts/build.sh; echo "exit: $?"
+kill $FAKE   # your own stand-in only
+```
+
+Expected: `error: an Unreal Editor is running…`, a line listing the stand-in `sleep`, and `exit: 1`.
 
 - [ ] **Step 10: Check git sees only source files, then commit**
 
