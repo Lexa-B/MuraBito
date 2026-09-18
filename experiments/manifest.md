@@ -177,3 +177,11 @@ Space pause/resume · Esc quit. The camera cannot be steered.
 ### Headless
 
 `cd experiments/exp-03 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --seed K --start S --screenshot-dir screenshots --screenshot-every M`. `--no-preload` shows the world loading in; `screenshots/` is gitignored. Headless runs need a GPU driver with EGL. `test_gfx.py` and `test_main.py`'s headless run skip themselves without a GL context; set `MURABITO_REQUIRE_GL=1` to make that a failure instead (for a machine, like the development one, where a skip would hide a real regression).
+
+### Open questions
+
+Raised in the final whole-branch review; the fixes are in, but these are spec questions for the user to decide.
+
+- **Load hysteresis.** With no hysteresis, the rail's default start makes the ken window toggle along a cho edge as well as the shaku window along a ken edge (see the spec's "Amendments from review"): the loader's cho flips between two candidates every so often, reloading 7 ken chunks each way. A small cache of recently unloaded chunks would stop the regeneration, but that is a spec change, not a bug fix.
+- **What "60 fps" means.** After the rail fix, a 400-frame run from `--start 1200` s (which includes one cho crossing) measured: total frame time median 3.08 ms, max 14.96 ms, 0 of 400 frames over 16.7 ms, including the 40 frames right after the crossing (max there 15.0 ms). The spec's success criterion ("60 fps ... no frame over 33 ms at a cho crossing") reads as a worst-case bound, which this now clears comfortably; is the criterion meant as an average, or as a bound on every frame?
+- **Distant ri borders** still alias into faint red blotches near the horizon (placeholder line tuning, not addressed in this wave).
