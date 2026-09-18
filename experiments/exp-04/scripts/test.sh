@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Build, then run automation tests headless. Usage: test.sh [TestPathPrefix]
+# Build a private copy of the project, then run its automation tests headless. Usage: test.sh [TestPathPrefix]
 # Exits 0 only if at least one test ran, none failed, none were skipped or left
 # not-run, and the automation queue's own completion count matches the passed count.
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 FILTER="${1:-MuraBito}"
 
-"$(dirname "${BASH_SOURCE[0]}")/build.sh"
+# Copy the project's source and config into the test mirror and build it there without hot
+# reload, so the tests run exactly the code on disk and never touch an open editor's modules.
+mkdir -p "$TEST_MIRROR"
+rsync -a --delete "$EXP_DIR/Source" "$EXP_DIR/Config" "$TEST_MIRROR/"
+cp "$PROJECT" "$TEST_MIRROR/MuraBito.uproject"
+MIRROR_PROJECT="$TEST_MIRROR/MuraBito.uproject"
+echo "test mirror: $TEST_MIRROR"
+"$BUILD_SH" MuraBitoEditor Linux Development -Project="$MIRROR_PROJECT" -WaitMutex -NoHotReloadFromIDE
 
 LOG_DIR="$EXP_DIR/Saved/TestLogs"
 mkdir -p "$LOG_DIR"
@@ -13,7 +20,7 @@ LOG="$LOG_DIR/test-$(date +%Y%m%d-%H%M%S).log"
 
 # timeout wraps the editor process this script itself starts, so it's safe to kill on expiry.
 set +e
-timeout 1200 "$UE_EDITOR_CMD" "$PROJECT" \
+timeout 1200 "$UE_EDITOR_CMD" "$MIRROR_PROJECT" \
   -ExecCmds="Automation RunTests $FILTER" \
   -TestExit="Automation Test Queue Empty" \
   -unattended -nullrhi -nosplash -nosound -stdout -FullStdOutLogOutput \
