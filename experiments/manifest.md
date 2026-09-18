@@ -125,6 +125,14 @@ Starts as a copy of exp-01: same hex map, three zones, wandering Smart Objects, 
 - `src/ai/`: same as exp-01, plus `vision.py` (sense cone and shadowcasting), `beliefs.py` (belief store, believed map, search area, frontier), `perception.py` (the only AI code that reads the world). `tasks.py` gains `ChooseTarget`, `Search` and `Explore` and reads beliefs.
 - `tests/`: same as exp-01 minus `test_layout.py`, plus `test_vision.py`, `test_mapgen.py`, `test_beliefs.py`, `test_believed_map.py`, `test_perception.py`, `test_body.py`, `test_boundary.py`.
 
+### Open questions
+
+Tuning and polish left open after the final review (2026-09-18); none is a bug.
+
+- **Explore churn.** `EXPLORE_MIN_DISTANCE = 3` often picks a frontier tile the actor sees within a fraction of a second, so Explore re-enters and logs a lot in the opening: about 35 `explore ->` lines per 120 s, against about 20 at a value of 9, with no measured change in how fast objects are found.
+- **Believed-map cost.** `BeliefStore.is_walkable` recomputes `object_blocked()` on every call, so a failed A\* costs about 10 ms. Fine at 1x; a per-tick cache would remove possible hitches at 8x.
+- **Stale target in the panel.** After Search gives up, `Target` keeps the abandoned name while Explore runs, and the CONTEXT panel shows it. Display only: no condition reads it there.
+
 ### Controls
 
 Space pause/resume · N step one tick while paused · +/- sim speed (0.25x-8x) · R reset (same seed) · Shift+R reset with a new seed · T truth overlay · Esc quit.
