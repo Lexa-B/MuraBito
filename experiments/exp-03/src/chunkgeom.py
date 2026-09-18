@@ -10,7 +10,7 @@ from functools import cache
 
 import numpy as np
 
-from hexaddr import RI, SQRT3, WIDTH_M, child_offsets, world_ri
+from hexaddr import RI, SQRT3, WIDTH_M, child_offsets, neighbours, world_ri
 from hexgrid import DIRECTIONS
 
 # The triangulation of every level: each cell anchors two triangles of mutually adjacent cells,
@@ -43,19 +43,16 @@ class Template:
         return np.where(inside, found, -1)
 
 
-def _neighbours(c):
-    return [(c[0] + dq, c[1] + dr) for dq, dr in DIRECTIONS]
-
 
 def _build(level: int, owned: list) -> Template:
     owned_set = set(owned)
-    ring1 = sorted({n for c in owned for n in _neighbours(c)} - owned_set)
+    ring1 = sorted({n for c in owned for n in neighbours(c)} - owned_set)
     ring1_set = set(ring1)
-    ring2 = sorted({n for c in ring1 for n in _neighbours(c)} - owned_set - ring1_set)
+    ring2 = sorted({n for c in ring1 for n in neighbours(c)} - owned_set - ring1_set)
     cells = list(owned) + ring1 + ring2
     index = {c: i for i, c in enumerate(cells)}
     vertex_count = len(owned) + len(ring1)
-    neighbours = [[index[n] for n in _neighbours(c)] for c in cells[:vertex_count]]
+    nbrs_idx = [[index[n] for n in neighbours(c)] for c in cells[:vertex_count]]
     triangles = set()
     for v in owned:
         for tri in (TRI_A, TRI_B):
@@ -73,7 +70,7 @@ def _build(level: int, owned: list) -> Template:
         owned=len(owned),
         vertex_count=vertex_count,
         cells=arr,
-        neighbours=np.array(neighbours, dtype=np.int64),
+        neighbours=np.array(nbrs_idx, dtype=np.int64),
         triangles=np.array(tri_idx, dtype=np.uint32),
         grid=grid,
         grid_lo=lo,
