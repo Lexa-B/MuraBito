@@ -67,3 +67,40 @@ def test_horizon_stays_in_view():
 def test_lap_fraction():
     rail = Rail(lambda x, z: 0.0, start=lap_seconds() * 1.25)
     assert rail.lap_fraction == pytest.approx(0.25)
+
+
+def test_ground_many_is_called_once_per_advance_and_once_at_construction():
+    calls = []
+
+    def ground_many(xs, zs):
+        xs, zs = list(xs), list(zs)
+        calls.append((xs, zs))
+        return [ground_height(x, z, 0) for x, z in zip(xs, zs)]
+
+    ground = lambda x, z: ground_height(x, z, 0)  # noqa: E731
+    rail = Rail(ground, start=0.0, ground_many=ground_many)
+    assert len(calls) == 1
+    assert len(calls[0][0]) == 2  # focus point and eye-floor point, batched together
+
+    for _ in range(5):
+        rail.advance(1 / 60)
+    assert len(calls) == 6
+
+    # reading focus/eye/eye-floor between advances must not trigger more lookups
+    _ = rail.focus, rail.eye
+    assert len(calls) == 6
+
+
+def test_ground_many_matches_the_scalar_path():
+    ground = lambda x, z: ground_height(x, z, 0)  # noqa: E731
+
+    def ground_many(xs, zs):
+        return [ground(x, z) for x, z in zip(xs, zs)]
+
+    a = Rail(ground, start=200.0, ground_many=ground_many)
+    b = Rail(ground, start=200.0)
+    for _ in range(180):
+        a.advance(1 / 30)
+        b.advance(1 / 30)
+        assert a.focus == pytest.approx(b.focus)
+        assert a.eye == pytest.approx(b.eye)

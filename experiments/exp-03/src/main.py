@@ -11,9 +11,10 @@ from chunkgen import generate_chunk
 from gfx import context
 from gfx.panel import Panel, PanelInfo
 from gfx.renderer import WINDOW_SIZE, Renderer, View
+from hexaddr import SHAKU
 from loading import ChunkStore, Loader
 from rail import Rail
-from terrain import ground_height
+from terrain import ground_height, height
 
 DT = 1 / 60
 MAX_FRAME_TIME = 0.25  # avoid a catch-up spiral after a stall
@@ -40,7 +41,8 @@ def main(argv=None):
     panel = Panel()
     store = ChunkStore(lambda level, parent: generate_chunk(level, parent, args.seed),
                        on_load=renderer.load_chunk, on_unload=renderer.unload_chunk)
-    rail = Rail(lambda x, z: ground_height(x, z, args.seed), start=args.start)
+    ground_many = lambda xs, zs: height(np.asarray(xs), np.asarray(zs), SHAKU, args.seed)  # noqa: E731
+    rail = Rail(lambda x, z: ground_height(x, z, args.seed), start=args.start, ground_many=ground_many)
     camera = Loader("camera", rail.focus_shaku)
     if not args.no_preload:
         store.drain([camera])
