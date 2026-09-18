@@ -158,3 +158,40 @@ Not decided yet.
 ### What
 
 Starts as a copy of exp-02. What changes is not decided yet.
+
+---
+
+## exp-04 — UE5 hex terrain and camera
+
+- **Started:** 2026-09-18
+- **Stack:** Unreal Engine 5.8.2, C++ (Linux). Set `UE_ROOT` to use another engine install.
+- **Build:** `experiments/exp-04/scripts/build.sh`
+- **Run:** `experiments/exp-04/scripts/game.sh [-Seed=N]`, or `scripts/editor.sh` and press Play
+- **Test:** `experiments/exp-04/scripts/test.sh [TestPathPrefix]` (headless UE automation tests)
+- **Design:** [`exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md`](exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md)
+
+### Why
+
+A separate line from exp-00–03. Instead of mocking AI in pygame, this gets a basic Unreal Engine 5 world running.
+
+### What
+
+A C++ UE5 project with no binary assets. At startup the game mode builds everything into the engine's empty `/Engine/Maps/Entry` map:
+
+- **Terrain.** Hilly ground made from seeded layered noise (`-Seed=N`).
+- **Hex grid.** A pointy-top hex grid, radius 12, defined on a flat 2D plane and draped onto the terrain as thin lines. A 2D hex coordinate stands for a spot in the 3D world.
+- **Camera.** An overhead camera that pans (WASD/arrows, screen edges, middle-drag) and zooms (wheel). It tilts from about 75° down far out to about 45° close in.
+- **Hover.** An outline on the tile under the mouse.
+
+The repo holds only what's needed to build and run: no engine code, and no `.uasset`/`.umap` files. Don't save the Entry map from the editor.
+
+### Layout
+
+- `MuraBito.uproject`, `Config/`: project file and settings (default map, game mode, Enhanced Input)
+- `Source/MuraBito/`: `HexGrid`, `TerrainHeight`, `MeshBuilders`, `CameraMath` (pure math); `Terrain`, `HexOverlay`, `CameraRig`, `InputController`, `WorldBuilder` (actors); `Materials` (runtime materials)
+- `Source/MuraBito/Private/Tests/`: automation tests for the hex grid, height function, mesh builders and camera math
+- `scripts/`: build, editor, game and test wrappers around the local engine install
+
+### Controls
+
+WASD/arrows or screen edges pan · middle-drag pans · wheel zooms · mouse hover highlights a tile.
