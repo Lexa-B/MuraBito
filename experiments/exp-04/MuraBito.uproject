@@ -1,0 +1,17 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.8",
+	"Category": "",
+	"Description": "MuraBito exp-04: procedural hex terrain and overhead camera",
+	"Modules": [
+		{
+			"Name": "MuraBito",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{ "Name": "ProceduralMeshComponent", "Enabled": true },
+		{ "Name": "EnhancedInput", "Enabled": true }
+	]
+}

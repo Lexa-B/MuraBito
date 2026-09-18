@@ -1,0 +1,17 @@
+# Unreal build outputs, caches and per-user state
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# Generated IDE / project files
+.vs/
+*.code-workspace
+/Makefile
+/CMakeLists.txt
+/*.pro
+/*.pri
+/*.kdev4
+/.kdev4/
+/compile_commands.json
+/.clangd
