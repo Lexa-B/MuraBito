@@ -53,5 +53,7 @@ MuraBito/
 - **No binary assets yet.** No `.uasset`/`.umap` files and no Git LFS; the world is built in C++ at runtime. How assets get stored is decided when there is something to author.
 - **Naming:** keep UE's type prefixes (`A`, `F`, `U`), but the names after them are plain and say what the class does (`ACameraRig`, not a "…Pawn"). Code and docs don't name games that inspired the project.
 - **Build and test with the scripts**, from the experiment dir: `scripts/build.sh`, `scripts/test.sh [TestPathPrefix]` (headless automation tests; pass/fail comes from the log, since the editor's exit code is always 1 under `-TestExit`).
-- **Never kill, signal or otherwise touch an Unreal Editor (or any process) you didn't start.** `build.sh` refuses to run while any editor is open; when it does, stop and ask the user to close it.
+- **Never kill, signal or otherwise touch an Unreal Editor (or any process) you didn't start.**
+- **The user may have the editor open on the same checkout while you work.** `build.sh` then does a hot-reload build, and the open editor loads it by itself within about a second. While the user is in Play, the reload waits until they stop. Changes to class layout (new or changed `UPROPERTY`/`UCLASS`, header changes) don't hot-reload reliably: tell the user to restart the editor after those.
+- **`test.sh` is safe with an editor open.** It copies the project into a private mirror (`~/.cache/murabito/exp-04-test-mirror`) and builds that with `-NoHotReloadFromIDE`, so the tests run the code on disk and never touch the editor's modules.
 - **Windowed runs need the desktop display.** Shells in the user's terminal may have no `DISPLAY`/`WAYLAND_DISPLAY`; `game.sh` and `editor.sh` take them from the systemd user session.

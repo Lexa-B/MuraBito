@@ -196,7 +196,8 @@ Raised in the final whole-branch review; the fixes are in, but these are spec qu
 - **Run:** `experiments/exp-04/scripts/game.sh [-Seed=N]`, or `experiments/exp-04/scripts/editor.sh` and press Play
 - **Test:** `experiments/exp-04/scripts/test.sh [TestPathPrefix]` (headless UE automation tests)
 - **Design:** [`exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md`](exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md)
-- `build.sh` (and so `test.sh`, which calls it) refuses to run while any Unreal Editor is running. Close the editor first; the scripts never stop it for you. The check looks for an editor process launched by its path, not by window title.
+- Works side by side with an open editor. With exp-04 open, `build.sh` does a hot-reload build that the editor loads by itself (after Play stops, if it's running). Restart the editor after header or class-layout changes. The scripts never stop an editor.
+- `test.sh` builds and tests a private copy of the project (`~/.cache/murabito/exp-04-test-mirror`, set `MURABITO_TEST_MIRROR` to move it), so it runs fine with the editor open.
 - `test.sh` needs `rg` (ripgrep) on PATH to parse the automation log.
 
 ### Why

@@ -19,18 +19,23 @@ for f in "$UE_EDITOR" "$UE_EDITOR_CMD" "$BUILD_SH"; do
   fi
 done
 
-# Refuse to build while any Unreal Editor is running. A running editor makes rebuilt modules
-# load under a new hot-reload name, so tests would silently run stale code. Close the editor
-# yourself; these scripts never stop it for you.
-require_no_running_editor() {
+# Any running Unreal Editor from this engine install, whatever project it has open, makes
+# UnrealBuildTool build editor targets in hot-reload mode (see HotReload.cs, ShouldDoHotReloadFromIDE):
+# modules get a numbered suffix for the open editor to load, and UnrealEditor.modules is left alone.
+# That is what we want when the editor has this project open. These scripts never stop an editor.
+note_running_editor() {
   local running
   running=$(pgrep -a -f '/UnrealEditor(-Cmd)?( |$)' || true)
   if [[ -n "$running" ]]; then
-    echo "error: an Unreal Editor is running. Close it, then retry:" >&2
+    echo "note: an Unreal Editor is running, so this is a hot-reload build for it to pick up:" >&2
     echo "$running" >&2
-    exit 1
   fi
 }
+
+# Headless tests run on a private copy of the project, built without hot reload. A hot-reload
+# build leaves UnrealEditor.modules pointing at the previous modules, so a fresh engine process
+# started on this checkout while an editor is open would run stale code.
+TEST_MIRROR="${MURABITO_TEST_MIRROR:-${XDG_CACHE_HOME:-$HOME/.cache}/murabito/exp-04-test-mirror}"
 
 # Windowed runs need the desktop session's display. A shell whose parent process lives outside
 # the graphical session (for example a terminal multiplexer server started as a systemd user
