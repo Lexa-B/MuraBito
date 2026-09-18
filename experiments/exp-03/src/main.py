@@ -65,9 +65,9 @@ def main(argv=None):
                     if event.key == pygame.K_SPACE:
                         paused = not paused
 
-            started = time.perf_counter()
             # Headless runs are deterministic: one fixed frame time, no waiting on the clock.
             frame_time = DT if args.frames else min(clock.tick(60) / 1000, MAX_FRAME_TIME)
+            started = time.perf_counter()  # after the clock's sleep, so frame_ms times only our own work
             if not paused:
                 accumulator += frame_time
                 while accumulator >= DT:

@@ -66,10 +66,12 @@ class Panel:
                        f"   seed {info.seed}{state}", 14, y) + 6
 
         y = self._head("TIERS", y)
-        y = self._text("tier     chunks    cells     tris   +/s  -/s   gen ms  queue", 14, y, "dim", self.small)
+        y = self._text("tier     chunks    cells     tris   +/s  -/s  gen ms last/mean  queue", 14, y, "dim",
+                       self.small)
         for name, stats, loads, unloads in info.tiers:
+            gen = f"{stats.gen_ms_last:5.1f}/{stats.gen_ms_mean:5.1f}"
             y = self._text(f"{name:<6} {stats.chunks:>6} {stats.cells:>8} {stats.triangles:>8} {loads:>5} {unloads:>4}"
-                           f" {stats.gen_ms_mean:>8.1f} {stats.queued:>6}", 14, y, "text", self.small)
+                           f" {gen:>12} {stats.queued:>6}", 14, y, "text", self.small)
         y += 8
 
         y = self._head("NEIGHBOURHOOD", y)

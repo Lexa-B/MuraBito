@@ -3,7 +3,8 @@
 Every level is a pointy-top axial hex lattice with the same orientation (packing B): a level-L
 cell (a, b) is centred on the level-(L-1) cell (N*a, N*b), N = PACKING[L]. A child belongs to
 exactly one parent: the nearest parent centre, ties to the lexicographically greatest (a, b).
-Pure Python ints; the numpy twin for whole chunks is in chunkgeom.py.
+Pure Python ints; `owner` has no numpy twin, because a level's ownership is the same for every
+parent, so chunkgeom.py's templates are built from it once, not evaluated per chunk.
 """
 
 import math
@@ -26,7 +27,8 @@ Address = tuple[Tile, Tile, Tile, Tile]  # ri (world position), cho, ken, shaku 
 
 
 def d2(dq: int, dr: int) -> int:
-    """Squared hex-plane distance of an axial offset, times 1 (exact integer)."""
+    """Squared hex-plane distance of an axial offset (dq, dr), in units of a cell width squared,
+    as an exact integer. For a unit neighbour step (one of hexgrid.DIRECTIONS), d2 == 1."""
     return dq * dq + dq * dr + dr * dr
 
 
