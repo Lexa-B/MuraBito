@@ -87,6 +87,7 @@ bool FHexDrapeTest::RunTest(const FString& Parameters)
 	FDrapeParams Params;
 	Params.Lift = 12.f;
 	const FMeshData Mesh = MeshBuilders::BuildHexEdges(Grid, Height, Params, FLinearColor::Black);
+	TestTrue(TEXT("mesh is not empty"), Mesh.Vertices.Num() > 0);
 	for (const FVector& V : Mesh.Vertices)
 	{
 		TestEqual(TEXT("vertex Z = Height + Lift"), V.Z, static_cast<double>(Height.Height(V.X, V.Y) + Params.Lift), 0.01);
