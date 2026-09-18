@@ -1,4 +1,10 @@
+import os
+
 import pytest
+
+# Set to fail (not skip) when no GL context is available -- see the manifest's exp-03 Headless
+# paragraph.
+REQUIRE_GL = os.environ.get("MURABITO_REQUIRE_GL") == "1"
 
 
 def test_parse_args_defaults():
@@ -21,7 +27,7 @@ def test_headless_run_saves_screenshots(tmp_path, monkeypatch, extra):
     try:
         main.main(["--frames", "120", "--screenshot-dir", str(tmp_path), "--screenshot-every", "60", *extra])
     except Exception as exc:  # no EGL / GPU here
-        if "EGL" in str(exc) or "context" in str(exc).lower():
+        if not REQUIRE_GL and ("EGL" in str(exc) or "context" in str(exc).lower()):
             pytest.skip(f"no GL context: {exc}")
         raise
     assert sorted(p.name for p in tmp_path.iterdir()) == ["frame_00060.png", "frame_00120.png"]

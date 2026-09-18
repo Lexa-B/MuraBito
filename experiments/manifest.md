@@ -176,4 +176,4 @@ Space pause/resume · Esc quit. The camera cannot be steered.
 
 ### Headless
 
-`cd experiments/exp-03 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --seed K --start S --screenshot-dir screenshots --screenshot-every M`. `--no-preload` shows the world loading in; `screenshots/` is gitignored. Headless runs need a GPU driver with EGL.
+`cd experiments/exp-03 && SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy uv run src/main.py --frames N --seed K --start S --screenshot-dir screenshots --screenshot-every M`. `--no-preload` shows the world loading in; `screenshots/` is gitignored. Headless runs need a GPU driver with EGL. `test_gfx.py` and `test_main.py`'s headless run skip themselves without a GL context; set `MURABITO_REQUIRE_GL=1` to make that a failure instead (for a machine, like the development one, where a skip would hide a real regression).

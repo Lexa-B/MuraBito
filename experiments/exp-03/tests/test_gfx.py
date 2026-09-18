@@ -4,12 +4,17 @@ Debug mode 1 writes, per pixel, the tier that drew it and the low bytes of its c
 level; debug mode 2 draws flat grey with the border lines. Skipped when no GL context is available.
 """
 
+import os
 import random
 
 import numpy as np
 import pytest
 
 moderngl = pytest.importorskip("moderngl")
+
+# Set to fail (not skip) when no GL context is available -- for the development machine, where a
+# skip would hide a real regression. See the manifest's exp-03 Headless paragraph.
+REQUIRE_GL = os.environ.get("MURABITO_REQUIRE_GL") == "1"
 
 from chunkgen import generate_chunk  # noqa: E402
 from gfx.matrices import ortho  # noqa: E402
@@ -41,6 +46,8 @@ def _make_world(focus):
     try:
         ctx = moderngl.create_standalone_context(backend="egl", require=330)
     except Exception as exc:  # no EGL / GPU here
+        if REQUIRE_GL:
+            raise
         pytest.skip(f"no GL context: {exc}")
     target = ctx.framebuffer(color_attachments=[ctx.renderbuffer(WINDOW_SIZE)],
                              depth_attachment=ctx.depth_renderbuffer(WINDOW_SIZE))
