@@ -13,12 +13,16 @@ STONE = (0.55, 0.54, 0.51)
 BLADE = (0.42, 0.62, 0.28)
 
 
-def _faces(tris, colour) -> np.ndarray:
+def _faces(tris, colour, normal=None) -> np.ndarray:
+    """Face normals by default; a fixed `normal` shades every face alike (used for grass)."""
     rows = []
     for a, b, c in tris:
         a, b, c = np.asarray(a, float), np.asarray(b, float), np.asarray(c, float)
-        n = np.cross(b - a, c - a)
-        n /= np.linalg.norm(n) or 1.0
+        if normal is None:
+            n = np.cross(b - a, c - a)
+            n /= np.linalg.norm(n) or 1.0
+        else:
+            n = normal
         rows += [(*p, *n, *colour) for p in (a, b, c)]
     return np.array(rows, dtype=np.float32)
 
@@ -64,14 +68,18 @@ def rock(radius=0.6, squash=0.6, colour=STONE) -> np.ndarray:
 
 
 def tuft() -> np.ndarray:
+    """A low clump of five thin blades splayed outward: reads as grass, not as a tiny tree.
+
+    Every face gets an upward normal, so the clump is lit like the ground under it."""
     tris = []
-    for k in range(3):
-        a = math.pi * k / 3
-        dx, dz = 0.04 * math.cos(a), 0.04 * math.sin(a)
-        p0, p1 = (-dx, -0.01, -dz), (dx, -0.01, dz)
-        top = (0.01 * math.sin(a), 0.14, 0.01 * math.cos(a))
-        tris += [(p0, top, p1), (p1, top, p0)]
-    return _faces(tris, BLADE)
+    for k in range(5):
+        a = 2 * math.pi * k / 5 + 0.3 * math.sin(k * 2.39996)  # fixed jitter, so every tuft mesh is the same
+        c, s = math.cos(a), math.sin(a)
+        base_l = (0.006 * -s, -0.01, 0.006 * c)
+        base_r = (0.006 * s, -0.01, -0.006 * c)
+        tip = (0.085 * c, 0.09 + 0.02 * math.sin(k * 1.7), 0.085 * s)  # leaning out, 9-11 cm tall
+        tris += [(base_l, tip, base_r), (base_r, tip, base_l)]
+    return _faces(tris, BLADE, normal=(0.0, 1.0, 0.0))
 
 
 def pebble() -> np.ndarray:
