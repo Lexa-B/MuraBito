@@ -4,6 +4,10 @@ Intermediate/
 Saved/
 DerivedDataCache/
 
+# Per-user editor content (personal sandbox folders and content browser collections)
+Content/Developers/
+Content/Collections/
+
 # Generated IDE / project files
 .vs/
 *.code-workspace

@@ -166,9 +166,11 @@ Starts as a copy of exp-02. What changes is not decided yet.
 - **Started:** 2026-09-18
 - **Stack:** Unreal Engine 5.8.2, C++ (Linux). Set `UE_ROOT` to use another engine install.
 - **Build:** `experiments/exp-04/scripts/build.sh`
-- **Run:** `experiments/exp-04/scripts/game.sh [-Seed=N]`, or `scripts/editor.sh` and press Play
+- **Run:** `experiments/exp-04/scripts/game.sh [-Seed=N]`, or `experiments/exp-04/scripts/editor.sh` and press Play
 - **Test:** `experiments/exp-04/scripts/test.sh [TestPathPrefix]` (headless UE automation tests)
 - **Design:** [`exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md`](exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md)
+- `build.sh` (and so `test.sh`, which calls it) refuses to run while any Unreal Editor is running. Close the editor first; the scripts never stop it for you. The check looks for an editor process launched by its path, not by window title.
+- `test.sh` needs `rg` (ripgrep) on PATH to parse the automation log.
 
 ### Why
 

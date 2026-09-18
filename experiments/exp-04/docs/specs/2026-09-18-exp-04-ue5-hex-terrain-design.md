@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-18
 - **Stack:** Unreal Engine 5.8.2 (C++), Linux
-- **Status:** approved design, not yet implemented
+- **Status:** approved design, implemented
 
 ## Why
 

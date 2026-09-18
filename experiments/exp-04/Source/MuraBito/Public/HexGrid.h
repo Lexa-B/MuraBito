@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/StaticArray.h"
 
 /** Axial hex coordinate. The third cube coordinate is S = -Q - R. */
 struct MURABITO_API FHex

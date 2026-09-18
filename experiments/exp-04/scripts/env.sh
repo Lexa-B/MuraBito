@@ -6,11 +6,13 @@ set -euo pipefail
 UE_ROOT="${UE_ROOT:-/home/lexa/DevProjects/_GameDev/_GameEngines/UnrealEngine/5.8.2}"
 EXP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$EXP_DIR/MuraBito.uproject"
-EDITOR="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor"
-EDITOR_CMD="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor-Cmd"
+# Named UE_EDITOR, not EDITOR: EDITOR is a common shell env var (default text editor), and
+# assigning it here would clobber the user's own exported $EDITOR for any child process.
+UE_EDITOR="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor"
+UE_EDITOR_CMD="$UE_ROOT/Engine/Binaries/Linux/UnrealEditor-Cmd"
 BUILD_SH="$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh"
 
-for f in "$EDITOR" "$EDITOR_CMD" "$BUILD_SH"; do
+for f in "$UE_EDITOR" "$UE_EDITOR_CMD" "$BUILD_SH"; do
   if [[ ! -x "$f" ]]; then
     echo "error: no Unreal Engine install at UE_ROOT=$UE_ROOT (missing $f)" >&2
     exit 1

@@ -107,16 +107,20 @@ bool FHexOutlineTest::RunTest(const FString& Parameters)
 
 	const int32 Segments = MeshBuilders::SegmentsPerEdge(Grid.TileSize, Params);
 	TestTrue(TEXT("arrays consistent"), ArraysConsistent(Mesh));
+	TestTrue(TEXT("mesh is not empty"), Mesh.Vertices.Num() > 0);
 	TestEqual(TEXT("six edges"), Mesh.Vertices.Num(), 6 * (Segments + 1) * 2);
 	TestEqual(TEXT("all triangles face up"), CountNonUpFacing(Mesh), 0);
 
-	// Every vertex lies within half a width of the tile's outline, and all are the given color.
+	// Every vertex lies within half a width of the tile's outline, is draped onto the terrain
+	// (Z = Height + Lift), and is the given color.
 	const FVector2D Center = Grid.HexToXY(Hex);
 	for (int32 i = 0; i < Mesh.Vertices.Num(); ++i)
 	{
-		const double R = FVector2D::Distance(FVector2D(Mesh.Vertices[i]), Center);
+		const FVector& V = Mesh.Vertices[i];
+		const double R = FVector2D::Distance(FVector2D(V), Center);
 		// The outline runs between the inradius (sqrt3/2 * size) and the circumradius (size).
 		TestTrue(TEXT("near outline"), R >= Grid.TileSize * FMath::Sqrt(3.0) / 2.0 - Params.Width && R <= Grid.TileSize + Params.Width);
+		TestEqual(TEXT("vertex Z = Height + Lift"), V.Z, static_cast<double>(Height.Height(V.X, V.Y) + Params.Lift), 0.01);
 		TestTrue(TEXT("color"), Mesh.Colors[i].Equals(FLinearColor::Yellow));
 	}
 	return true;

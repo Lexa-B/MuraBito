@@ -66,6 +66,9 @@ bool FTerrainHeightRangeTest::RunTest(const FString& Parameters)
 			Max = FMath::Max(Max, Z);
 		}
 	}
+	// These two can't actually fail: Height() clamps its result to [-Amplitude, Amplitude]
+	// (see FTerrainHeight::Height in TerrainHeight.cpp). They document that clamp contract.
+	// "has relief" below is the check that would catch a regression here.
 	TestTrue(TEXT("never above amplitude"), Max <= 600.f);
 	TestTrue(TEXT("never below -amplitude"), Min >= -600.f);
 	// It's hilly, not flat: the spread over about 136 m is a real fraction of the amplitude.
