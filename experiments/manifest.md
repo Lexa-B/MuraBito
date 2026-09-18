@@ -185,3 +185,42 @@ Raised in the final whole-branch review; the fixes are in, but these are spec qu
 - **Load hysteresis.** With no hysteresis, the rail's default start makes the ken window toggle along a cho edge as well as the shaku window along a ken edge (see the spec's "Amendments from review"): the loader's cho flips between two candidates every so often, reloading 7 ken chunks each way. A small cache of recently unloaded chunks would stop the regeneration, but that is a spec change, not a bug fix.
 - **What "60 fps" means.** After the rail fix, a 400-frame run from `--start 1200` s (which includes one cho crossing) measured: total frame time median 3.08 ms, max 14.96 ms, 0 of 400 frames over 16.7 ms, including the 40 frames right after the crossing (max there 15.0 ms). The spec's success criterion ("60 fps ... no frame over 33 ms at a cho crossing") reads as a worst-case bound, which this now clears comfortably; is the criterion meant as an average, or as a bound on every frame?
 - **Distant ri borders** still alias into faint red blotches near the horizon (placeholder line tuning, not addressed in this wave).
+
+---
+
+## exp-04 — UE5 hex terrain and camera
+
+- **Started:** 2026-09-18
+- **Stack:** Unreal Engine 5.8.2, C++ (Linux). Set `UE_ROOT` to use another engine install.
+- **Build:** `experiments/exp-04/scripts/build.sh`
+- **Run:** `experiments/exp-04/scripts/game.sh [-Seed=N]`, or `experiments/exp-04/scripts/editor.sh` and press Play
+- **Test:** `experiments/exp-04/scripts/test.sh [TestPathPrefix]` (headless UE automation tests)
+- **Design:** [`exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md`](exp-04/docs/specs/2026-09-18-exp-04-ue5-hex-terrain-design.md)
+- `build.sh` (and so `test.sh`, which calls it) refuses to run while any Unreal Editor is running. Close the editor first; the scripts never stop it for you. The check looks for an editor process launched by its path, not by window title.
+- `test.sh` needs `rg` (ripgrep) on PATH to parse the automation log.
+
+### Why
+
+A separate line from exp-00–03. Instead of mocking AI in pygame, this gets a basic Unreal Engine 5 world running.
+
+### What
+
+A C++ UE5 project with no binary assets. At startup the game mode builds everything into the engine's empty `/Engine/Maps/Entry` map:
+
+- **Terrain.** Hilly ground made from seeded layered noise (`-Seed=N`).
+- **Hex grid.** A pointy-top hex grid, radius 12, defined on a flat 2D plane and draped onto the terrain as thin lines. A 2D hex coordinate stands for a spot in the 3D world.
+- **Camera.** An overhead camera that pans (WASD/arrows, screen edges, middle-drag) and zooms (wheel). It tilts from about 75° down far out to about 45° close in.
+- **Hover.** An outline on the tile under the mouse.
+
+The repo holds only what's needed to build and run: no engine code, and no `.uasset`/`.umap` files. Don't save the Entry map from the editor.
+
+### Layout
+
+- `MuraBito.uproject`, `Config/`: project file and settings (default map, game mode, Enhanced Input)
+- `Source/MuraBito/`: `HexGrid`, `TerrainHeight`, `MeshBuilders`, `CameraMath` (pure math); `Terrain`, `HexOverlay`, `CameraRig`, `InputController`, `WorldBuilder` (actors); `Materials` (runtime materials)
+- `Source/MuraBito/Private/Tests/`: automation tests for the hex grid, height function, mesh builders and camera math
+- `scripts/`: build, editor, game and test wrappers around the local engine install
+
+### Controls
+
+WASD/arrows or screen edges pan · middle-drag pans · wheel zooms · mouse hover highlights a tile.
