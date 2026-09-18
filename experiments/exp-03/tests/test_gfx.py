@@ -15,16 +15,29 @@ from chunkgen import generate_chunk  # noqa: E402
 from gfx.matrices import ortho  # noqa: E402
 from gfx.renderer import VIEW_SIZE, WINDOW_SIZE, Renderer, View  # noqa: E402
 from hexaddr import (  # noqa: E402
-    CHO, KEN, RI, SHAKU, SQRT3, WIDTH_M, axial_to_metres, centre_shaku, hex_round, metres_to_axial, tier_cell,
+    CHO, KEN, RI, SHAKU, SQRT3, WIDTH_M, axial_to_metres, centre_shaku, hex_round, in_world, metres_to_axial,
+    round_at, shaku_at, tier_cell,
 )
 from loading import ChunkStore, Loader  # noqa: E402
 
 FOCUS = (centre_shaku((4, 0), RI)[0] + 40, 17)  # near the rail start, not on any centre
+
+# Chosen by scanning shaku points along the ri (-4,0)/(-5,0) boundary, at ken resolution, for ones
+# whose loader's shaku window (its ken cell plus 3 rings) contains both a cho border that is not a
+# ri border (top level 2) and a ri border (top level 3), then picking, among nearby candidates, the
+# one with the cleanest classification (fewest anti-aliased edge pixels landing off-colour). Its q
+# is negative, which exercises split_origin's floor on negatives.
+FOCUS2 = (-59658, 2657)
+
+# Straddles the world's outer rim: the shaku point nearest the midpoint between ri (12, 0), the
+# outermost in-world ri in that direction (hex distance 12), and ri (13, 0), its out-of-world
+# neighbour.
+FOCUS_EDGE = shaku_at(*((axial_to_metres(12, 0, RI)[i] + axial_to_metres(13, 0, RI)[i]) / 2 for i in (0, 1)))
+
 W, H = VIEW_SIZE
 
 
-@pytest.fixture(scope="module")
-def world():
+def _make_world(focus):
     try:
         ctx = moderngl.create_standalone_context(backend="egl", require=330)
     except Exception as exc:  # no EGL / GPU here
@@ -34,33 +47,47 @@ def world():
     renderer = Renderer(ctx, target)
     store = ChunkStore(lambda level, parent: generate_chunk(level, parent, 0), renderer.load_chunk,
                        renderer.unload_chunk)
-    store.drain([Loader("camera", FOCUS)])
-    yield renderer, set(store.loaded)
+    store.drain([Loader("camera", focus)])
+    return ctx, renderer, set(store.loaded)
+
+
+@pytest.fixture(scope="module")
+def world():
+    ctx, renderer, loaded = _make_world(FOCUS)
+    yield renderer, loaded
     ctx.release()
 
 
-def top_down(renderer, half_height_m, mode, level=SHAKU, base=(0, 0)):
-    ox, oz = axial_to_metres(*FOCUS)
+@pytest.fixture(scope="module")
+def world2():
+    """A second loader focus, near a ri corner, so cho and ri borders are both in view."""
+    ctx, renderer, loaded = _make_world(FOCUS2)
+    yield renderer, loaded
+    ctx.release()
+
+
+def top_down(renderer, half_height_m, mode, level=SHAKU, base=(0, 0), focus=FOCUS):
+    ox, oz = axial_to_metres(*focus)
     aspect = W / H
     proj = ortho(-half_height_m * aspect, half_height_m * aspect, -half_height_m, half_height_m, 1.0, 20000.0)
     renderer.debug, renderer.debug_level, renderer.debug_base = mode, level, base
-    renderer.draw(View(origin=FOCUS, eye=(ox, 5000.0, oz), target=(ox, 0.0, oz), up=(0.0, 0.0, -1.0),
+    renderer.draw(View(origin=focus, eye=(ox, 5000.0, oz), target=(ox, 0.0, oz), up=(0.0, 0.0, -1.0),
                        projection=proj), draw_panel=False)
     renderer.debug = 0
     return renderer.read_rgb((0, 0, W, H))
 
 
-def pixel_to_world(i, j, half_height_m):
+def pixel_to_world(i, j, half_height_m, focus=FOCUS):
     """Centre of pixel column i, row j (top row first) in world metres."""
-    ox, oz = axial_to_metres(*FOCUS)
+    ox, oz = axial_to_metres(*focus)
     aspect = W / H
     x = -half_height_m * aspect + (i + 0.5) * 2 * half_height_m * aspect / W
     view_y = half_height_m - (j + 0.5) * 2 * half_height_m / H
     return ox + x, oz - view_y  # screen up is world -z
 
 
-def world_to_pixel(x, z, half_height_m):
-    ox, oz = axial_to_metres(*FOCUS)
+def world_to_pixel(x, z, half_height_m, focus=FOCUS):
+    ox, oz = axial_to_metres(*focus)
     aspect = W / H
     i = (x - ox + half_height_m * aspect) / (2 * half_height_m * aspect) * W - 0.5
     j = (half_height_m - (oz - z)) / (2 * half_height_m) * H - 0.5
@@ -145,9 +172,9 @@ def test_flat_grey_away_from_every_edge(world):
     assert checked > 500
 
 
-def border_points(loaded, level, count, rng, half):
+def border_points(loaded, level, count, rng, half, focus=FOCUS):
     """Midpoints of shaku edges inside the shaku window where the owners at `level` differ."""
-    ox, oz = axial_to_metres(*FOCUS)
+    ox, oz = axial_to_metres(*focus)
     found = []
     tries = 0
     while len(found) < count and tries < 200000:
@@ -203,3 +230,60 @@ def test_parent_pixels_are_discarded_where_children_are_loaded(world):
     assert (tier_all == SHAKU).sum() > 0
     assert ((tier_all == SHAKU) & (tier != KEN)).sum() <= 0.01 * (tier_all == SHAKU).sum()
     assert (tier == SHAKU).sum() == 0
+
+
+def test_no_terrain_beyond_the_world_edge(world):
+    """An orthographic top-down view straddling the world's rim (radius 12 ri): terrain draws
+    where hexaddr says the point is in the world, and nothing (bare sky) where it is not."""
+    renderer, _ = world
+    half = 1200.0
+    aspect = W / H
+    ox, oz = axial_to_metres(*FOCUS_EDGE)
+    proj = ortho(-half * aspect, half * aspect, -half, half, 1.0, 40000.0)
+    renderer.draw(View(origin=FOCUS_EDGE, eye=(ox, 20000.0, oz), target=(ox, 0.0, oz), up=(0.0, 0.0, -1.0),
+                       projection=proj), draw_panel=False)
+    img = renderer.read_rgb((0, 0, W, H))
+
+    rng = random.Random(7)
+    sky = None
+    inside_checked = outside_checked = 0
+    outside_mismatches = 0
+    inside_matches_sky = 0
+    for _ in range(4000):
+        i, j = rng.randrange(W), rng.randrange(H)
+        x, z = pixel_to_world(i, j, half, focus=FOCUS_EDGE)
+        rgb = tuple(int(v) for v in img[j, i])
+        if in_world(round_at(x, z, RI)):
+            inside_checked += 1
+            if sky is not None and sum(abs(a - b) for a, b in zip(rgb, sky)) < 30:
+                inside_matches_sky += 1
+        else:
+            outside_checked += 1
+            if sky is None:
+                sky = rgb
+            elif rgb != sky:
+                outside_mismatches += 1
+
+    assert inside_checked > 500 and outside_checked > 500
+    assert outside_mismatches == 0  # nothing is drawn past the rim: bare sky, uniformly
+    assert inside_matches_sky <= 0.02 * inside_checked  # terrain is drawn just inside it
+
+
+# world2 opens a second GL context; keep its tests last so no test after it touches `world`'s
+# renderer (a standalone context's handles are only valid while it is the current context).
+@pytest.mark.parametrize("level, check", [
+    (CHO, lambda rgb: rgb[0] > rgb[1] > rgb[2] and rgb[0] > 200 and rgb[2] < 100),   # yellow
+    (RI, lambda rgb: rgb[0] > 200 and rgb[1] < 100 and rgb[2] < 100),                # red
+])
+def test_cho_and_ri_border_pixels_carry_their_levels_colour(world2, level, check):
+    renderer, loaded = world2
+    half = 6.0
+    img = top_down(renderer, half, 2, focus=FOCUS2)
+    points = border_points(loaded, level, 60, random.Random(level), half, focus=FOCUS2)
+    assert len(points) >= 30
+    good = 0
+    for x, z in points:
+        i, j = world_to_pixel(x, z, half, focus=FOCUS2)
+        if 0 <= i < W and 0 <= j < H and check(tuple(int(v) for v in img[j, i])):
+            good += 1
+    assert good >= 0.9 * len(points)

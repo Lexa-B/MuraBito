@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -5,10 +7,20 @@ from chunkgen import (
     INNER_SHAKU, MORPH_END, MORPH_START, PEBBLE, ROCK_PROP, TREE, TUFT, generate_chunk, morph_range, tier_height,
 )
 from chunkgeom import mesh_height, template
-from hexaddr import CHO, KEN, PACKING, RI, SHAKU, WIDTH_M, axial_to_metres, parent, shaku_at, up
+from hexaddr import CHO, KEN, PACKING, RI, SHAKU, WIDTH_M, axial_to_metres, centre_shaku, children, neighbours, parent, shaku_at, up
+from loading import window_parents
 from terrain import height
 
 SEED = 0
+
+# A few loader foci, deliberately varied: the rail's start, the world centre, near the world edge,
+# and one with negative coordinates.
+MARGIN_FOCI = [
+    centre_shaku((4, 0), RI),
+    (0, 0),
+    centre_shaku((10, -3), RI),
+    centre_shaku((-6, 2), RI),
+]
 
 
 @pytest.fixture(scope="module")
@@ -126,3 +138,22 @@ def test_morph_ranges():
     assert morph_range(RI) == (0.0, 0.0)
     # the blend ends before the nearest possible window edge (2.26 parent widths, measured)
     assert MORPH_END < 2.26
+
+
+@pytest.mark.parametrize("level", [SHAKU, KEN, CHO])
+def test_window_boundary_cells_lie_beyond_the_morph_end(level):
+    """Every vertex of every boundary cell of a tier's window (a vertex, in the chunk mesh, sits
+    at a cell's centre) is at least MORPH_END parent widths from the loader focus, for a few
+    foci including the rail start. This pins the argument that the geomorph (see morph_range)
+    always finishes before a window ever reaches its edge."""
+    w = WIDTH_M[level + 1]
+    for focus in MARGIN_FOCI:
+        cells = set()
+        for p in window_parents(focus, level):
+            cells.update(children(p, level + 1))
+        fx, fz = axial_to_metres(*focus)
+        boundary = [c for c in cells if not all(n in cells for n in neighbours(c))]
+        assert boundary
+        for cell in boundary:
+            x, z = axial_to_metres(*cell, level)
+            assert math.hypot(x - fx, z - fz) / w >= MORPH_END
