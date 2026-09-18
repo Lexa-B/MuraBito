@@ -13,6 +13,7 @@ Ideas are tried out as small, self-contained **experiments**. They come in two k
   - **exp-00** is a "hello world" of pathing and object use, meant to show what the AI systems will be like in UE.
   - **exp-01** builds on it with objects that wander.
   - **exp-02** adds fog of war and a believed world.
+  - **exp-03** is a tiered hex world: hierarchical hex addresses at historical Japanese scale, loaded in tiers of detail (moderngl).
 
 Don't assume goals beyond what `experiments/manifest.md` and each experiment's spec state.
 
