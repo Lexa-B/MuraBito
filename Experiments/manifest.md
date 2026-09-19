@@ -229,3 +229,19 @@ The repo holds only what's needed to build and run: no engine code, and no `.uas
 ### Controls
 
 WASD/arrows or screen edges pan · middle-drag pans · wheel zooms · mouse hover highlights a tile.
+
+---
+
+## exp-05 — Unified hex coordinate system (C++)
+
+- **Started:** 2026-09-19 (handoff only)
+- **Stack:** Unreal Engine 5.8, C++
+- **Design:** not written yet. Start from the handoff: [`exp-05/docs/HANDOFF.md`](exp-05/docs/HANDOFF.md)
+
+### Why
+
+The user wants one uniform hex coordinate system instead of terrain, hex grids and everything else being separate elements: ri, cho and ken as nested scales of chunks that can be hot-loaded, with the shaku as the primary unit. Terrain lives in that system, and the drawn hexes reflect it.
+
+### What
+
+Not decided yet. The handoff lists what to read and the questions to ask.
