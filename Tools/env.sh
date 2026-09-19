@@ -41,19 +41,26 @@ TEST_MIRROR="${MURABITO_TEST_MIRROR:-${XDG_CACHE_HOME:-$HOME/.cache}/murabito/ma
 # the graphical session (for example a terminal multiplexer server started as a systemd user
 # service) has no DISPLAY or WAYLAND_DISPLAY, and the engine then crashes during RHI init. Fill
 # them in from the systemd user environment, which the desktop session exports.
+#
+# The editor runs on X11 (through XWayland on a Wayland desktop) unless SDL_VIDEODRIVER says
+# otherwise: on SDL's Wayland backend, editor pop-ups such as the Pick Parent Class tree stop
+# taking clicks. Set SDL_VIDEODRIVER=wayland to try the native backend.
 require_display() {
-  if [[ -n "${DISPLAY-}" || -n "${WAYLAND_DISPLAY-}" ]]; then
-    return
+  export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
+  local needed=DISPLAY
+  [[ "$SDL_VIDEODRIVER" == wayland ]] && needed=WAYLAND_DISPLAY
+  if [[ -z "${!needed-}" ]]; then
+    local line name
+    while IFS= read -r line; do
+      name="${line%%=*}"
+      case "$name" in
+        DISPLAY|WAYLAND_DISPLAY|XAUTHORITY) [[ -z "${!name-}" ]] && export "$line" ;;
+      esac
+    done < <(systemctl --user show-environment 2>/dev/null || true)
+    if [[ -z "${!needed-}" ]]; then
+      echo "error: no $needed here or in the systemd user session; run from a desktop terminal" >&2
+      exit 1
+    fi
+    echo "note: using the desktop session's display ($needed=${!needed})" >&2
   fi
-  local line
-  while IFS= read -r line; do
-    case "$line" in
-      DISPLAY=*|WAYLAND_DISPLAY=*|XAUTHORITY=*) export "$line" ;;
-    esac
-  done < <(systemctl --user show-environment 2>/dev/null || true)
-  if [[ -z "${DISPLAY-}" && -z "${WAYLAND_DISPLAY-}" ]]; then
-    echo "error: no DISPLAY or WAYLAND_DISPLAY here or in the systemd user session; run from a desktop terminal" >&2
-    exit 1
-  fi
-  echo "note: using the desktop session's display (DISPLAY=${DISPLAY-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY-})" >&2
 }
