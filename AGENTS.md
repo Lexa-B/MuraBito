@@ -69,7 +69,8 @@ The repo root is the Murabito Unreal Engine 5.8 project. The user drives it; AI 
 `main` is protected on GitHub by the ruleset "Protect main": no direct pushes (for anyone, admins included), no force-pushes, and no deleting it. Every change reaches `main` through a pull request that the user reviews and merges.
 
 - **Work on a branch.** Branch from an up-to-date `main` (`git fetch`, then branch from `origin/main`). Name it after the change, e.g. `agents-pr-workflow`.
-- **Open a pull request** with `gh pr create` against `main`, with a short summary of what changed and why. Keep each PR small enough to review in one sitting.
+- **Don't push or open a pull request until the user approves the work.** When a change is ready, commit it locally, tell the user what's there and how to check it, and wait. Approval to design or build something is not approval to open its PR.
+- **Open the pull request** once approved, with `gh pr create` against `main` and a short summary of what changed and why. Keep each PR small enough to review in one sitting.
 - **Never merge into `main` locally or push `main`.** The server rejects it. The user merges the PR on GitHub, then runs `git pull` on `main`.
 - **Check the PR is still open before pushing follow-up commits** (`gh pr view <n> --json state,mergedAt`). If it was merged or closed in the meantime, start a fresh branch from `origin/main` and cherry-pick onto it.
 - **Use `git -C <absolute path>` for every git command.** Worktrees and a shell working directory that persists between commands make relative paths easy to get wrong.
