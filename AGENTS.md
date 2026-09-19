@@ -15,7 +15,7 @@ Ideas are tried out as small, self-contained **experiments**. They come in two k
   - **exp-02** adds fog of war and a believed world.
   - **exp-03** is a tiered hex world: hierarchical hex addresses at historical Japanese scale, loaded in tiers of detail (moderngl).
 
-Don't assume goals beyond what `experiments/manifest.md` and each experiment's spec state.
+Don't assume goals beyond what `Experiments/manifest.md` and each experiment's spec state.
 
 
 ## Repository Organization
@@ -23,7 +23,7 @@ Don't assume goals beyond what `experiments/manifest.md` and each experiment's s
 ```
 MuraBito/
 ├─ AGENTS.md, CLAUDE.md, LICENSE, .gitignore
-└─ experiments/
+└─ Experiments/
    ├─ manifest.md          one entry per experiment: what, why, how to run
    ├─ exp-NN/              a Python + pygame experiment
    │  ├─ pyproject.toml    its own uv project (Python deps managed with `uv add`)
@@ -41,16 +41,16 @@ MuraBito/
          └─ plans/         implementation plans (YYYY-MM-DD-<topic>-plan.md)
 ```
 
-- **Experiments are self-contained.** Code, tests, dependencies and docs live inside `experiments/exp-NN/`. Nothing experiment-specific goes at the repo root.
+- **Experiments are self-contained.** Code, tests, dependencies and docs live inside `Experiments/exp-NN/`. Nothing experiment-specific goes at the repo root.
 - **A new experiment can start as a copy of an earlier one.** exp-01 started as a copy of exp-00. The copy gets its own project name (uv project, or UE project/module), and the earlier experiment is left unchanged.
-- **Every new experiment gets an entry in `experiments/manifest.md`.** Update the entry when the experiment's design changes.
+- **Every new experiment gets an entry in `Experiments/manifest.md`.** Update the entry when the experiment's design changes.
 - **Specs go in the experiment's `docs/specs/` and plans in its `docs/plans/`.** This replaces the superpowers default of `docs/superpowers/specs/` and `docs/superpowers/plans/`. Don't create a `superpowers/` folder or a root-level `docs/`. Name specs `YYYY-MM-DD-<topic>-design.md` and plans `YYYY-MM-DD-<topic>-plan.md`.
 
 
 ## Unreal Engine experiments
 
 - **Public MIT repo: never copy engine code or assets in.** Projects use the local engine install by path (`UE_ROOT`, default `/home/lexa/DevProjects/_GameDev/_GameEngines/UnrealEngine/5.8.2`). Reading engine headers and source to check an API is fine; pasting them, or Epic copyright headers, into the repo is not.
-- **No binary assets yet.** No `.uasset`/`.umap` files and no Git LFS; the world is built in C++ at runtime. How assets get stored is decided when there is something to author.
+- **Binary assets go through Git LFS.** `.gitattributes` at the repo root routes Unreal assets, source art, textures, audio, video, fonts, raw data, third-party binaries and PDFs to LFS (not lockable yet). Check a new binary type is covered before committing it; adding it afterwards means rewriting history. exp-04 itself has no binary assets: its world is built in C++ at runtime.
 - **Naming:** keep UE's type prefixes (`A`, `F`, `U`), but the names after them are plain and say what the class does (`ACameraRig`, not a "…Pawn"). Code and docs don't name games that inspired the project.
 - **Build and test with the scripts**, from the experiment dir: `scripts/build.sh`, `scripts/test.sh [TestPathPrefix]` (headless automation tests; pass/fail comes from the log, since the editor's exit code is always 1 under `-TestExit`).
 - **Never kill, signal or otherwise touch an Unreal Editor (or any process) you didn't start.**
