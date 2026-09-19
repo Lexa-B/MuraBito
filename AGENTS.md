@@ -15,7 +15,7 @@ Ideas are tried out as small, self-contained **experiments**. They come in two k
   - **exp-02** adds fog of war and a believed world.
   - **exp-03** is a tiered hex world: hierarchical hex addresses at historical Japanese scale, loaded in tiers of detail (moderngl).
 
-Don't assume goals beyond what `experiments/manifest.md` and each experiment's spec state.
+Don't assume goals beyond what `Experiments/manifest.md` and each experiment's spec state.
 
 
 ## Repository Organization
@@ -23,7 +23,7 @@ Don't assume goals beyond what `experiments/manifest.md` and each experiment's s
 ```
 MuraBito/
 ├─ AGENTS.md, CLAUDE.md, LICENSE, .gitignore
-└─ experiments/
+└─ Experiments/
    ├─ manifest.md          one entry per experiment: what, why, how to run
    ├─ exp-NN/              a Python + pygame experiment
    │  ├─ pyproject.toml    its own uv project (Python deps managed with `uv add`)
@@ -41,9 +41,9 @@ MuraBito/
          └─ plans/         implementation plans (YYYY-MM-DD-<topic>-plan.md)
 ```
 
-- **Experiments are self-contained.** Code, tests, dependencies and docs live inside `experiments/exp-NN/`. Nothing experiment-specific goes at the repo root.
+- **Experiments are self-contained.** Code, tests, dependencies and docs live inside `Experiments/exp-NN/`. Nothing experiment-specific goes at the repo root.
 - **A new experiment can start as a copy of an earlier one.** exp-01 started as a copy of exp-00. The copy gets its own project name (uv project, or UE project/module), and the earlier experiment is left unchanged.
-- **Every new experiment gets an entry in `experiments/manifest.md`.** Update the entry when the experiment's design changes.
+- **Every new experiment gets an entry in `Experiments/manifest.md`.** Update the entry when the experiment's design changes.
 - **Specs go in the experiment's `docs/specs/` and plans in its `docs/plans/`.** This replaces the superpowers default of `docs/superpowers/specs/` and `docs/superpowers/plans/`. Don't create a `superpowers/` folder or a root-level `docs/`. Name specs `YYYY-MM-DD-<topic>-design.md` and plans `YYYY-MM-DD-<topic>-plan.md`.
 
 
