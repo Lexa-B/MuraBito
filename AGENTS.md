@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Project Overview
 
-MuraBito is a new project, described by its author as halfway between a game and a fun AI experiment / population-dynamics simulator. It's being built in Unreal Engine 5, starting with exp-04.
+Murabito is a new project, described by its author as halfway between a game and a fun AI experiment / population-dynamics simulator. It's being built in Unreal Engine 5, starting with exp-04.
 
 Ideas are tried out as small, self-contained **experiments**. They come in two kinds:
 
@@ -21,7 +21,7 @@ Don't assume goals beyond what `Experiments/manifest.md` and each experiment's s
 ## Repository Organization
 
 ```
-MuraBito/
+Murabito/
 ├─ AGENTS.md, CLAUDE.md, LICENSE, .gitignore
 └─ Experiments/
    ├─ manifest.md          one entry per experiment: what, why, how to run
