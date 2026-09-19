@@ -50,7 +50,7 @@ MuraBito/
 ## Unreal Engine experiments
 
 - **Public MIT repo: never copy engine code or assets in.** Projects use the local engine install by path (`UE_ROOT`, default `/home/lexa/DevProjects/_GameDev/_GameEngines/UnrealEngine/5.8.2`). Reading engine headers and source to check an API is fine; pasting them, or Epic copyright headers, into the repo is not.
-- **No binary assets yet.** No `.uasset`/`.umap` files and no Git LFS; the world is built in C++ at runtime. How assets get stored is decided when there is something to author.
+- **Binary assets go through Git LFS.** `.gitattributes` at the repo root routes Unreal assets, source art, textures, audio, video, fonts, raw data, third-party binaries and PDFs to LFS (not lockable yet). Check a new binary type is covered before committing it; adding it afterwards means rewriting history. exp-04 itself has no binary assets: its world is built in C++ at runtime.
 - **Naming:** keep UE's type prefixes (`A`, `F`, `U`), but the names after them are plain and say what the class does (`ACameraRig`, not a "…Pawn"). Code and docs don't name games that inspired the project.
 - **Build and test with the scripts**, from the experiment dir: `scripts/build.sh`, `scripts/test.sh [TestPathPrefix]` (headless automation tests; pass/fail comes from the log, since the editor's exit code is always 1 under `-TestExit`).
 - **Never kill, signal or otherwise touch an Unreal Editor (or any process) you didn't start.**
