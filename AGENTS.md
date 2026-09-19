@@ -22,7 +22,14 @@ Don't assume goals beyond what `Experiments/manifest.md` and each experiment's s
 
 ```
 Murabito/
-├─ AGENTS.md, CLAUDE.md, LICENSE, .gitignore
+├─ AGENTS.md, CLAUDE.md, LICENSE, LICENSE-ASSETS, LICENSING.md, .gitignore, .gitattributes
+├─ Murabito.uproject       the main project (see "Main project" below)
+├─ Config/                 its text config
+├─ Source/Murabito/        its C++ module; Private/Tests/ holds automation tests
+├─ Content/                its assets (.uasset/.umap, through Git LFS)
+├─ Plugins/                project plugins (none yet)
+├─ Tools/                  build.sh, editor.sh, game.sh, test.sh for the main project
+├─ Docs/                   project docs (no specs or plans; see below)
 └─ Experiments/
    ├─ manifest.md          one entry per experiment: what, why, how to run
    ├─ exp-NN/              a Python + pygame experiment
@@ -44,7 +51,17 @@ Murabito/
 - **Experiments are self-contained.** Code, tests, dependencies and docs live inside `Experiments/exp-NN/`. Nothing experiment-specific goes at the repo root.
 - **A new experiment can start as a copy of an earlier one.** exp-01 started as a copy of exp-00. The copy gets its own project name (uv project, or UE project/module), and the earlier experiment is left unchanged.
 - **Every new experiment gets an entry in `Experiments/manifest.md`.** Update the entry when the experiment's design changes.
-- **Specs go in the experiment's `docs/specs/` and plans in its `docs/plans/`.** This replaces the superpowers default of `docs/superpowers/specs/` and `docs/superpowers/plans/`. Don't create a `superpowers/` folder or a root-level `docs/`. Name specs `YYYY-MM-DD-<topic>-design.md` and plans `YYYY-MM-DD-<topic>-plan.md`.
+- **An experiment's specs go in its `docs/specs/` and plans in its `docs/plans/`.** This replaces the superpowers default of `docs/superpowers/specs/` and `docs/superpowers/plans/`. Don't create a `superpowers/` folder. Name specs `YYYY-MM-DD-<topic>-design.md` and plans `YYYY-MM-DD-<topic>-plan.md`.
+
+
+## Main project
+
+The repo root is the Murabito Unreal Engine 5.8 project. The user drives it; AI assists.
+
+- **No spec or plan files for the main project.** Agree the design with the user in chat, wait for a yes, then implement it and open a PR. Specs and plans are only for experiments.
+- **Build, test and run with `Tools/`:** `Tools/build.sh`, `Tools/test.sh [TestPathPrefix]` (default prefix `Murabito`), `Tools/editor.sh`, `Tools/game.sh`. The test mirror is `~/.cache/murabito/main-test-mirror`.
+- **`AGameRules`** is the project's game mode (`/Script/Murabito.GameRules`).
+- The Unreal Engine rules below apply to the main project as well as the UE experiments.
 
 
 ## Git workflow
@@ -58,14 +75,14 @@ Murabito/
 - **Use `git -C <absolute path>` for every git command.** Worktrees and a shell working directory that persists between commands make relative paths easy to get wrong.
 
 
-## Unreal Engine experiments
+## Unreal Engine (main project and experiments)
 
 - **Public MIT repo: never copy engine code or assets in.** Projects use the local engine install by path (`UE_ROOT`, default `/home/lexa/DevProjects/_GameDev/_GameEngines/UnrealEngine/5.8.2`). Reading engine headers and source to check an API is fine; pasting them, or Epic copyright headers, into the repo is not.
 - **Two licences: code is MIT, assets are CC BY-SA 4.0.** See `LICENSING.md` for what counts as an asset. Third-party files (fonts, Epic/Fab content, anything not made for this repo) keep their own licences: add their licence file next to them and list them in `LICENSING.md`, and never commit anything whose licence doesn't allow redistribution.
 - **Binary assets go through Git LFS.** `.gitattributes` at the repo root routes Unreal assets, source art, textures, audio, video, fonts, raw data, third-party binaries and PDFs to LFS (not lockable yet). Check a new binary type is covered before committing it; adding it afterwards means rewriting history. exp-04 itself has no binary assets: its world is built in C++ at runtime.
 - **Naming:** keep UE's type prefixes (`A`, `F`, `U`), but the names after them are plain and say what the class does (`ACameraRig`, not a "…Pawn"). Code and docs don't name games that inspired the project.
-- **Build and test with the scripts**, from the experiment dir: `scripts/build.sh`, `scripts/test.sh [TestPathPrefix]` (headless automation tests; pass/fail comes from the log, since the editor's exit code is always 1 under `-TestExit`).
+- **Build and test with the scripts** (`Tools/` for the main project, `scripts/` in a UE experiment): `build.sh`, `test.sh [TestPathPrefix]` (headless automation tests; pass/fail comes from the log, since the editor's exit code is always 1 under `-TestExit`).
 - **Never kill, signal or otherwise touch an Unreal Editor (or any process) you didn't start.**
 - **The user may have the editor open on the same checkout while you work.** `build.sh` then does a hot-reload build, and the open editor loads it by itself within about a second. While the user is in Play, the reload waits until they stop. Changes to class layout (new or changed `UPROPERTY`/`UCLASS`, header changes) don't hot-reload reliably: tell the user to restart the editor after those.
-- **`test.sh` is safe with an editor open.** It copies the project into a private mirror (`~/.cache/murabito/exp-04-test-mirror`) and builds that with `-NoHotReloadFromIDE`, so the tests run the code on disk and never touch the editor's modules.
+- **`test.sh` is safe with an editor open.** It copies the project into a private mirror under `~/.cache/murabito/` and builds that with `-NoHotReloadFromIDE`, so the tests run the code on disk and never touch the editor's modules.
 - **Windowed runs need the desktop display.** Shells in the user's terminal may have no `DISPLAY`/`WAYLAND_DISPLAY`; `game.sh` and `editor.sh` take them from the systemd user session.

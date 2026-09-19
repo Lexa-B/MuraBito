@@ -14,3 +14,23 @@ screenshots/
 .DS_Store
 .vscode/
 .idea/
+
+# Unreal (root project): build outputs, caches and per-user state
+/Binaries/
+/Intermediate/
+/Saved/
+/DerivedDataCache/
+/Content/Developers/
+/Content/Collections/
+
+# Generated IDE / project files for the root project
+.vs/
+*.code-workspace
+/Makefile
+/CMakeLists.txt
+/*.pro
+/*.pri
+/*.kdev4
+/.kdev4/
+/compile_commands.json
+/.clangd
