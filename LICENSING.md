@@ -1,6 +1,6 @@
 # Licensing
 
-MuraBito uses two licences: one for code and one for assets.
+Murabito uses two licences: one for code and one for assets.
 
 | What | Licence | Text |
 |---|---|---|
@@ -16,7 +16,7 @@ Everything else is code and falls under the MIT licence.
 
 ## Attribution
 
-Assets are © 2026 Lexa, licensed under CC BY-SA 4.0. When you reuse them, credit "MuraBito (https://github.com/Lexa-B/MuraBito)", link to the licence (https://creativecommons.org/licenses/by-sa/4.0/), say whether you changed them, and share your changed versions under the same licence.
+Assets are © 2026 Lexa, licensed under CC BY-SA 4.0. When you reuse them, credit "Murabito (https://github.com/Lexa-B/Murabito)", link to the licence (https://creativecommons.org/licenses/by-sa/4.0/), say whether you changed them, and share your changed versions under the same licence.
 
 ## Third-party material
 
