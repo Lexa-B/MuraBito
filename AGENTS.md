@@ -47,6 +47,17 @@ MuraBito/
 - **Specs go in the experiment's `docs/specs/` and plans in its `docs/plans/`.** This replaces the superpowers default of `docs/superpowers/specs/` and `docs/superpowers/plans/`. Don't create a `superpowers/` folder or a root-level `docs/`. Name specs `YYYY-MM-DD-<topic>-design.md` and plans `YYYY-MM-DD-<topic>-plan.md`.
 
 
+## Git workflow
+
+`main` is protected on GitHub by the ruleset "Protect main": no direct pushes (for anyone, admins included), no force-pushes, and no deleting it. Every change reaches `main` through a pull request that the user reviews and merges.
+
+- **Work on a branch.** Branch from an up-to-date `main` (`git fetch`, then branch from `origin/main`). Name it after the change, e.g. `agents-pr-workflow`.
+- **Open a pull request** with `gh pr create` against `main`, with a short summary of what changed and why. Keep each PR small enough to review in one sitting.
+- **Never merge into `main` locally or push `main`.** The server rejects it. The user merges the PR on GitHub, then runs `git pull` on `main`.
+- **Check the PR is still open before pushing follow-up commits** (`gh pr view <n> --json state,mergedAt`). If it was merged or closed in the meantime, start a fresh branch from `origin/main` and cherry-pick onto it.
+- **Use `git -C <absolute path>` for every git command.** Worktrees and a shell working directory that persists between commands make relative paths easy to get wrong.
+
+
 ## Unreal Engine experiments
 
 - **Public MIT repo: never copy engine code or assets in.** Projects use the local engine install by path (`UE_ROOT`, default `/home/lexa/DevProjects/_GameDev/_GameEngines/UnrealEngine/5.8.2`). Reading engine headers and source to check an API is fine; pasting them, or Epic copyright headers, into the repo is not.
