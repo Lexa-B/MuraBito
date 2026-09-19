@@ -5,10 +5,11 @@
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 FILTER="${1:-Murabito}"
 
-# Copy the project's source and config into the test mirror and build it there without hot
+# Copy the project's source, config and content into the test mirror and build it there without hot
 # reload, so the tests run exactly the code on disk and never touch an open editor's modules.
 mkdir -p "$TEST_MIRROR"
-rsync -a --delete "$ROOT_DIR/Source" "$ROOT_DIR/Config" "$TEST_MIRROR/"
+rsync -a --delete --exclude Content/Developers --exclude Content/Collections \
+  "$ROOT_DIR/Source" "$ROOT_DIR/Config" "$ROOT_DIR/Content" "$TEST_MIRROR/"
 cp "$PROJECT" "$TEST_MIRROR/Murabito.uproject"
 MIRROR_PROJECT="$TEST_MIRROR/Murabito.uproject"
 echo "test mirror: $TEST_MIRROR"
